@@ -179,6 +179,29 @@ namespace KTAPIApplication.Controllers
             //return new JsonResult("1");
         }
 
+        [HttpGet("fallout")]
+        public ActionResult Fallout()
+        {
+            double lon = 116.391667;
+            double lat = 39.903333;
+            double alt_ft = 0;
+            double equivalent_kt = 1000;
+            double windSpeed_mph = 15;
+            double angle = 225;
+            double rads01 = 1;
+            double rads02 = 20;
+            double rads03 = 0;
+
+            _analysisService.Fallout(lon,lat,alt_ft,equivalent_kt,windSpeed_mph,angle,rads01,rads02,rads03);
+
+                 return new JsonResult(new
+                 {
+                     return_status = 1,
+                     return_msg = "数据库查询异常",
+                     return_data = ""
+                 });
+        }
+
         [HttpGet("query")]
         [HttpPost("query")]
         public ActionResult Query()

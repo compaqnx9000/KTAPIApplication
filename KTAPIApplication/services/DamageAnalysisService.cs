@@ -196,9 +196,25 @@ namespace KTAPIApplication.services
 
             return DamageEnumeration.Safe;
         }
-        private DamageEnumeration Fallout()
+        /// <summary>
+        /// 返回核沉降
+        /// </summary>
+        /// <param name="lon"></param>
+        /// <param name="lat"></param>
+        /// <param name="alt_ft"></param>
+        /// <param name="equivalent_kt"></param>
+        /// <param name="windSpeed_mph"></param>
+        /// <param name="angle"></param>
+        /// <param name="rads01"></param>
+        /// <param name="rads02"></param>
+        /// <param name="rads03"></param>
+        /// <returns></returns>
+        public DamageEnumeration Fallout(double lon,double lat,double alt_ft,double equivalent_kt,double windSpeed_mph, double angle,double rads01, double rads02, double rads03)
         {
             // 放射性核沉降 =》人员
+            List<Coor> g1 =_analyse.CalcRadioactiveFalloutRegion(lon, lat, alt_ft, equivalent_kt, windSpeed_mph, angle,DamageEnumeration.Light);
+            List<Coor> g2 = _analyse.CalcRadioactiveFalloutRegion(lon, lat, alt_ft, equivalent_kt, windSpeed_mph, angle, DamageEnumeration.Heavy);
+            List<Coor> g3 = _analyse.CalcRadioactiveFalloutRegion(lon, lat, alt_ft, equivalent_kt, windSpeed_mph, angle, DamageEnumeration.Destroy);
             return DamageEnumeration.Safe;
         }
 

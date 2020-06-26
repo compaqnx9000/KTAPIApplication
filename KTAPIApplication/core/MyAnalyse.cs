@@ -277,7 +277,19 @@ namespace KTAPIApplication.core
             //    }
 
             //}
-            var ss = sfss[(int)level];//i = 3
+            var ss = sfss[1];//i = 3
+            switch (level)
+            {
+                case DamageEnumeration.Light:
+                    ss = sfss[1];
+                    break;
+                case DamageEnumeration.Heavy:
+                    ss = sfss[100];
+                    break;
+                case DamageEnumeration.Destroy:
+                    ss = sfss[1000];
+                    break;
+            }
             List<Coor> ll = plot_fallout(lng, lat, SFSS_fallout_points(ss, angle, steps), (int)level);
             return ll;
         }
