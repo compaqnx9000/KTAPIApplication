@@ -114,6 +114,24 @@ namespace KTAPIApplication.Services
             return collection.Find(filter.Eq("NuclearExplosionID", nuclearExplosionID)).ToList();
         }
 
+        public List<InfoBO> QueryInfoByBrigade(string brigade)
+        {
+            var collection = _otherClient.GetDatabase(_config.InfoSetting.Database).GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+            var filter = Builders<BsonDocument>.Filter;
+            //return collection.Find(filter.Eq("brigade", brigade)).ToList();
+
+            var list = collection.Find(filter.Eq("brigade", brigade)).ToList();
+
+            List<InfoBO> infos = new List<InfoBO>();
+
+            foreach (var doc in list)
+            {
+                var info = BsonSerializer.Deserialize<InfoBO>(doc);
+                infos.Add(info);
+            }
+            return infos;
+        }
+
 
         public VueVO QueryByBrigade(string brigade)
         {
@@ -129,8 +147,8 @@ namespace KTAPIApplication.Services
             var docs_01 = collection.Find(filter.Eq("brigade", brigade)).ToList();
             if (docs_01.Count > 0)
             {
-                info_Lon = docs_01[0].GetValue("x").AsDouble;
-                info_Lat = docs_01[0].GetValue("y").AsDouble;
+                info_Lon = docs_01[0].GetValue("lon").AsDouble;
+                info_Lat = docs_01[0].GetValue("lat").AsDouble;
 
             }
 

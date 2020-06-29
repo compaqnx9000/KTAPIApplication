@@ -186,7 +186,9 @@ namespace KTAPIApplication.Controllers
             double lat = 39.903333;
             double alt_ft = 0;
             double equivalent_kt = 1000;
-            double windSpeed_mph = 15;
+
+            // 传入的是米/小时，要换算成 英里/小时
+            double windSpeed_mph = 24140 * 0.0006214;//  1 米=0.0006214 英里
             double angle = 225;
             double rads01 = 1;
             double rads02 = 20;

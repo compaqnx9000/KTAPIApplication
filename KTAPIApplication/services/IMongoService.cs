@@ -19,7 +19,9 @@ namespace KTAPIApplication.Services
         List<BsonDocument> QueryMockAll();
         List<BsonDocument> QueryMock(string nuclearExplosionID);
 
+        /* info表操作 */
         List<InfoBO> QueryInfoAll();
+        List<InfoBO> QueryInfoByBrigade(string brigade);
 
 
         /* config表操作 */
