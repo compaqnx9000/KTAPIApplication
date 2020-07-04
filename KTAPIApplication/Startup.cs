@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using KTAPIApplication.services;
 using KTAPIApplication.Services;
 using Microsoft.AspNetCore.Builder;
@@ -55,6 +57,9 @@ namespace KTAPIApplication
 
             services.AddSingleton<IMongoService, MongoService>();
             services.AddSingleton<IDamageAnalysisService, DamageAnalysisService>();
+
+            services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));//DinkToPdf注入
+            services.AddTransient<IPDFService, PDFService>();
 
         }
 
