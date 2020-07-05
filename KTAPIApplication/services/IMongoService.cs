@@ -1,5 +1,6 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Controllers;
+using KTAPIApplication.services;
 using KTAPIApplication.vo;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -12,7 +13,7 @@ namespace KTAPIApplication.Services
 {
     public interface IMongoService
     {
-        List<Base> Query();
+        List<BaseVO> Query();
 
         VueVO QueryByBrigade(string brigade);
 

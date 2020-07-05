@@ -1,5 +1,6 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Controllers;
+using KTAPIApplication.services;
 using KTAPIApplication.vo;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -169,7 +170,7 @@ namespace KTAPIApplication.Services
              mock_Lat, mock_Alt, mock_Yield, mock_Date);
         }
 
-        public List<Base> Query()
+        public List<BaseVO> Query()
         {
             // 一个旅：通信站1个、发射场6~36个、中心库2个、待机库2个、营区（主营区1个，小营区2个）
             var collection = _client.GetDatabase(_config.InfoSetting.Database).
@@ -189,7 +190,7 @@ namespace KTAPIApplication.Services
             //                            & filter.Eq("brigade", "45旅")
             //                            & filter.Eq("classification","井")
             //                            ).ToList();
-            List<Base> baseVOs = new List<Base>();
+            List<BaseVO> baseVOs = new List<BaseVO>();
 
             // 循环查询
             foreach (string bs in bases)
@@ -291,7 +292,7 @@ namespace KTAPIApplication.Services
                     if (targetVOs.Count > 0)
                         brigadeVOs.Add(new BrigadeVO("ID", brigade, targetVOs));
                 }
-                baseVOs.Add(new Base("id", bs, brigadeVOs));
+                baseVOs.Add(new BaseVO("id", bs, brigadeVOs));
             }
 
             return baseVOs;

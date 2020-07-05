@@ -19,7 +19,7 @@ namespace KTAPIApplication.Controllers
             _PDFService = pDFService;
         }
         /// <summary>
-        /// http://localhost:5000/pdf?warBase=12&brigade=1002
+        /// http://localhost:5000/pdf?warBase=12&brigade=121
         /// </summary>
         /// <param name="warBase">基地名。</param>
         /// <param name="brigade">旅名。</param>

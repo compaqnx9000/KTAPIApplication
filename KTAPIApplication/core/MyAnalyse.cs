@@ -157,7 +157,9 @@ namespace KTAPIApplication.core
                                                 double kt,
                                                 double fallout_wind,
                                                 double fallout_angle,
-                                                DamageEnumeration level)
+                                                DamageEnumeration level,
+                                                ref double maximumDownwindDistance, 
+                                                ref double maximumWidth)
         {
             // 输入
             //double lng = 116.391667;
@@ -183,18 +185,21 @@ namespace KTAPIApplication.core
             if (hob_ft > 0)
             {
                 // 空爆
-                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, hob_ft, level);
+                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, hob_ft, level,
+                    ref  maximumDownwindDistance,ref  maximumWidth);
             }
             else
             {
-                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, -1, level);
+                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, -1, level,
+                    ref  maximumDownwindDistance,ref  maximumWidth);
             }
         }
 
 
 
         private List<Coor> do_fallout(double lng, double lat,
-            double kt, double wind, double fission_fraction, double angle, bool airburst, double hob_ft, DamageEnumeration level)
+            double kt, double wind, double fission_fraction, double angle, bool airburst, double hob_ft, DamageEnumeration level,
+            ref double maximumDownwindDistance, ref double maximumWidth)
         {
             if (kt < 1 || kt > 10 * Math.Pow(10, 5))
             {
@@ -233,14 +238,15 @@ namespace KTAPIApplication.core
             //}
             int[] rad_doses = new int[] { 1, 10, 100, 1000 };
 
-            return draw_fallout(lng, lat, angle, kt, kt_frac, rad_doses, airburst, fission_fraction, wind, level);
+            return draw_fallout(lng, lat, angle, kt, kt_frac, rad_doses, airburst, fission_fraction, wind, level, ref maximumDownwindDistance,  ref maximumWidth);
 
         }
 
         //draws fallout using the current settings. we keep these separate from the other function so I can just call it whenever I want to refresh it.
         private List<Coor> draw_fallout(double lng, double lat, double angle,
             double kt, double kt_frac, int[] rad_doses,
-            bool airburst, double fission_fraction, double wind, DamageEnumeration level)
+            bool airburst, double fission_fraction, double wind, DamageEnumeration level,
+            ref double maximumDownwindDistance, ref double maximumWidth)
         {
             Dictionary<int, Dictionary<string, double>> sfss;
             if (kt_frac > 0 && airburst)
@@ -252,7 +258,9 @@ namespace KTAPIApplication.core
                 sfss = SFSS_fallout(kt, rad_doses, (fission_fraction / 100), wind);
             }
 
-            var steps = 15;
+         
+
+                var steps = 15;
 
             // 下面2行不知道有啥用
             //dets[det_index].fallout_angle = Math.round(fallout_current.angle);//225
@@ -291,6 +299,9 @@ namespace KTAPIApplication.core
                     break;
             }
             List<Coor> ll = plot_fallout(lng, lat, SFSS_fallout_points(ss, angle, steps), (int)level);
+            const double mi2km = 1.60934;
+             maximumDownwindDistance = ss["downwind_cloud_distance"] * mi2km;
+             maximumWidth = ss["max_cloud_width"] * 2 * mi2km;
             return ll;
         }
 

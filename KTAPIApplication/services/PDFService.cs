@@ -1,12 +1,14 @@
-﻿using System;
+﻿using DinkToPdf;
+using DinkToPdf.Contracts;
+using KTAPIApplication.core;
+using KTAPIApplication.enums;
+using KTAPIApplication.services;
+using KTAPIApplication.vo;
+using MongoDB.Bson;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using DinkToPdf;
-using DinkToPdf.Contracts;
-using KTAPIApplication.core;
-using MongoDB.Bson;
 
 namespace KTAPIApplication.Services
 {
@@ -14,13 +16,17 @@ namespace KTAPIApplication.Services
     {
         private readonly IConverter _converter;
         private readonly IMongoService _mongoService;
+        private readonly IDamageAnalysisService _analysisService;
 
 
-        public PDFService(IConverter converter, IMongoService mongoService)
+        public PDFService(IConverter converter, IMongoService mongoService, IDamageAnalysisService analysisService)
         {
             _converter = converter;
             _mongoService = mongoService ??
                 throw new ArgumentNullException(nameof(mongoService));
+
+            _analysisService = analysisService ??
+                throw new ArgumentNullException(nameof(analysisService));
         }
 
         private string MakeHtml(string warBase, string brigade)
@@ -74,7 +80,7 @@ namespace KTAPIApplication.Services
 
                     .table-title {
                       text-align: center;
-                      font-size: 1.5rem;
+                      font-size: 2.5rem;
                       color: #333;
                     }
 
@@ -92,7 +98,7 @@ namespace KTAPIApplication.Services
 
                     .title-file {
                       text-align: center;
-                      font-size: 2rem;
+                      font-size: 3rem;
                       font-family: 'SimHei';
                       font-weight: 300;
                       margin-bottom: 1rem;
@@ -271,11 +277,11 @@ namespace KTAPIApplication.Services
                               </div>", DateTime.Now.ToLongDateString().ToString());
 
             // xxx旅核爆毁伤分析报告
-            sb.AppendFormat(@"<h1 class='title-file'>{0}旅核爆毁伤分析报告</h1>", "1001");
+            sb.AppendFormat(@"<h1 class='title-file'>【{0}】旅核爆毁伤分析报告</h1>", brigade);
 
             // 表1的文字描述
             sb.AppendFormat(@" <p class='paragraph'>
-                            {0}基地{1}旅，于2020年07月02日22点12分03秒,遭到袭击。遭袭核爆信息具体如下：
+                            【{0}】基地【{1}】旅，于2020年07月02日22点12分03秒,遭到袭击。遭袭核爆信息具体如下：
                          </p>",warBase,brigade);
             // 表1
             sb.Append(@"<p class='table-title'>表1 遭袭核爆信息</p>
@@ -310,7 +316,7 @@ namespace KTAPIApplication.Services
 
             // 表2的文字描述
             sb.AppendFormat(@"<p class='paragraph' style='margin-top:2rem'>
-                          {0}基地{1}旅中的核力量遭到破坏，其中
+                          【{0}】基地【{1}】旅中的核力量遭到破坏，其中
                           <span>{2}有{3}轻微受损，{4}中度受损，{5}重度受损；</span>
                           核力量毁伤情况具体如下：
                         </p>",warBase,brigade,8,19,29,39);
@@ -329,6 +335,32 @@ namespace KTAPIApplication.Services
                             </tr>");
             //
             // TODO 循环添加表
+            List<BaseVO> bases =  _analysisService.Query();
+            BaseVO baseVO = bases.Where(it => it.baseName == warBase).FirstOrDefault();
+            if (baseVO != null)
+            {
+                BrigadeVO brigadeVO = baseVO.brigadeList.Where(it => it.name == brigade).FirstOrDefault();
+                if (brigadeVO!=null)
+                {
+                    foreach(var target in brigadeVO.children)
+                    {
+                        sb.AppendFormat(@"<tr> 
+                                            <td>{0}</td>
+                                            <td>{1}</td>
+                                            <td>{2}</td>
+                                            <td>{3}</td>
+                                            <td>{4}</td>
+                                            <td>{5}</td>
+                                            <td>{6}</td>
+                                            <td>{7}</td>
+                                        ", target.abilityName,target.total,target.safeNumber,target.mildNumber,
+                                        target.moderateNumber,target.severeNumber,
+                                        "怎么算的？","TODO");
+                    }
+                }
+
+            }
+
 
             sb.Append(@"<tr>
                           <td colspan='4'>综合毁伤程度约(%)</td>
@@ -441,7 +473,7 @@ namespace KTAPIApplication.Services
 
             // 表5的文字描述
             sb.AppendFormat(@"<p class='paragraph' style='margin-top:2rem'>
-                            {0}基地{1}旅，核火球、冲击波、核辐射、光辐射、电磁脉冲五种毁伤区域如下：
+                            【{0}】基地【{1}】旅，核火球、冲击波、核辐射、光辐射、电磁脉冲五种毁伤区域如下：
                         </p>",warBase,brigade);
             // 表5
             sb.Append(@" <p class='table-title'>表5 核爆毁伤区域</p>
@@ -458,6 +490,7 @@ namespace KTAPIApplication.Services
                                 </tr>");
 
             //TODO: 循环添加
+            MyAnalyse myAnalyse = new MyAnalyse();
             foreach (var mock in mocks)
             {
                 DateTime occurTime = mock.GetValue("OccurTime").ToUniversalTime();
@@ -467,13 +500,17 @@ namespace KTAPIApplication.Services
                 double alt = mock.GetValue("Alt").AsDouble;
                 double yield = mock.GetValue("Yield").AsDouble;
 
-                MyAnalyse myAnalyse = new MyAnalyse();
+               
                 double fireball = myAnalyse.CalcfireBallRadius(yield / 1000.0, alt > 0);
                 double shockwave = myAnalyse.CalcShockWaveRadius(yield / 1000.0, alt * 3.2808399, 1);
                 double thermalRadiation = myAnalyse.GetThermalRadiationR(yield / 1000.0, alt * 3.2808399, 1.9);
                 double nuclearRadiation = myAnalyse.CalcNuclearRadiationRadius(yield / 1000.0, alt * 3.2808399, 100);
                 double nuclearPulse = myAnalyse.CalcNuclearPulseRadius(yield, alt / 1000.0, 200);
-                double fallout = 0; //myAnalyse.CalcRadioactiveFalloutRegion(yield, alt / 1000.0, 200);
+
+                double maximumDownwindDistance = 0; double maximumWidth = 0;
+                myAnalyse.CalcRadioactiveFalloutRegion(lon,lat,alt * 3.2808399 ,yield/1000, 15, 225,DamageEnumeration.Light,
+                     ref  maximumDownwindDistance,ref  maximumWidth);
+
 
 
                 sb.AppendFormat(@"<tr>
@@ -483,9 +520,10 @@ namespace KTAPIApplication.Services
                                  <td>{3}</td>
                                  <td>{4}</td>
                                  <td>{5}</td>
-                                 <td>{6}</td>
+                                 <td>{6} , {7}</td>
                                  </tr>", occurTime, Math.Round(fireball,2), Math.Round(shockwave,2), Math.Round(thermalRadiation,2),
-                                 Math.Round(nuclearRadiation,2), Math.Round(nuclearPulse,2), Math.Round(fallout,2));
+                                 Math.Round(nuclearRadiation,2), Math.Round(nuclearPulse,2), 
+                                 Math.Round(maximumDownwindDistance,2), Math.Round(maximumWidth,2));
             }
 
             sb.Append(@" </table></div>");
@@ -542,5 +580,6 @@ namespace KTAPIApplication.Services
             return file;
 
         }
+
     }
 }
