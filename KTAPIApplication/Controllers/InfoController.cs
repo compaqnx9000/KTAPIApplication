@@ -61,6 +61,7 @@ namespace KTAPIApplication.Controllers
         {
             var result = _mongoService.AddInfo(bo);
 
+
             return new JsonResult(new
             {
                 return_status = 0,
@@ -90,6 +91,19 @@ namespace KTAPIApplication.Controllers
                 return_status = result ? 0 : 1,
                 return_msg = result ? "删除成功" : "删除失败",
                 return_data = ""
+            });
+        }
+
+
+        // add 0715
+        [HttpGet("taggroup")]
+        public ActionResult Taggroup()
+        {
+            return new JsonResult(new
+            {
+                return_status = 0,
+                return_msg = "",
+                return_data = _mongoService.Taggroup()
             });
         }
     }

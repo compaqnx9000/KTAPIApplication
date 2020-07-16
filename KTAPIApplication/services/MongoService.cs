@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using SystemAPIApplication;
 
@@ -22,7 +23,10 @@ namespace KTAPIApplication.Services
 
         private MongoOtherSetting _otherConfig;
         private MongoClient _otherClient = null;
-        public MongoService(IOptions<MongoSetting> setting, IOptions<MongoOtherSetting> otherSetting)
+
+        private ServiceUrls _urlConfig;
+
+        public MongoService(IOptions<MongoSetting> setting, IOptions<MongoOtherSetting> otherSetting, IOptions<ServiceUrls> urls)
         {
             // 自己的库
             _config = setting.Value;
@@ -33,6 +37,8 @@ namespace KTAPIApplication.Services
             _otherConfig = otherSetting.Value;
             string otherConn = "mongodb://" + _otherConfig.IP + ":" + _otherConfig.Port;
             _otherClient = new MongoClient(otherConn);
+
+            _urlConfig = urls.Value;
         }
 
         //{
@@ -349,11 +355,23 @@ namespace KTAPIApplication.Services
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
-            var update = Builders<BsonDocument>.Update.Set("shock_wave", config.shock_wave)
-                                                    .Set("thermal_radiation", config.thermal_radiation)
-                                                    .Set("nuclear_radiation", config.nuclear_radiation)
-                                                    .Set("nuclear_pulse", config.nuclear_pulse)
-                                                    .Set("fallout", config.fallout);
+
+            var update = Builders<BsonDocument>.Update.Set("shock_wave_01", config.shock_wave_01)
+                                                        .Set("shock_wave_02", config.shock_wave_02)
+                                                        .Set("shock_wave_03", config.shock_wave_03)
+                                                        .Set("nuclear_radiation_01", config.nuclear_radiation_01)
+                                                        .Set("nuclear_radiation_02", config.nuclear_radiation_02)
+                                                        .Set("nuclear_radiation_03", config.nuclear_radiation_03)
+                                                        .Set("thermal_radiation_01", config.thermal_radiation_01)
+                                                        .Set("thermal_radiation_02", config.thermal_radiation_02)
+                                                        .Set("thermal_radiation_03", config.thermal_radiation_03)
+                                                        .Set("nuclear_pulse_01", config.nuclear_pulse_01)
+                                                        .Set("nuclear_pulse_02", config.nuclear_pulse_02)
+                                                        .Set("nuclear_pulse_03", config.nuclear_pulse_03)
+                                                        .Set("fallout_01", config.fallout_01)
+                                                        .Set("fallout_02", config.fallout_02)
+                                                        .Set("fallout_03", config.fallout_03)
+                                                        ;
 
             var result = collection.UpdateOne(filter, update);
             return result.ModifiedCount > 0;
@@ -432,9 +450,9 @@ namespace KTAPIApplication.Services
 
 
             var update = Builders<BsonDocument>.Update.Set("name", bo.name)
-                                                    .Set("level", bo.level)
-                                                    .Set("detail", bo.detail);
-
+                                                    .Set("level_01", bo.level_01)
+                                                    .Set("level_02", bo.level_02)
+                                                    .Set("level_03", bo.level_03);
             var result = collection.UpdateOne(filter, update);
             return result.ModifiedCount > 0;
         }
@@ -486,6 +504,9 @@ namespace KTAPIApplication.Services
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
 
+            InfoChanged();
+
+
             return document.GetValue("_id").ToString();
         }
         public bool UpdateInfo(string id, InfoBO bo)
@@ -521,13 +542,16 @@ namespace KTAPIApplication.Services
                                                     .Set("fallout_01", bo.fallout_01)
                                                     .Set("fallout_02", bo.fallout_02)
                                                     .Set("fallout_03", bo.fallout_03)
-                                                    .Set("warBase", bo.warBase);
+                                                    .Set("warBase", bo.warBase)
+                                                    .Set("fireRange",bo.fireRange);
 
 
 
 
 
             var result = collection.UpdateOne(filter, update);
+            InfoChanged();
+
             return result.ModifiedCount > 0;
         }
         public bool DeleteInfo(string id)
@@ -537,9 +561,263 @@ namespace KTAPIApplication.Services
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
+            InfoChanged();
+
             return result.DeletedCount > 0;
 
         }
+        public List<TaggroupVO> Taggroup()
+        {
+            List<TaggroupVO> taggroups = new List<TaggroupVO>();
+            var collection = _client.GetDatabase(_config.InfoSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+
+            var bases = collection.Distinct<string>("warBase", Builders<BsonDocument>.Filter.Empty).ToList().ToArray();
+            var missileNos = collection.Distinct<string>("missileNo", Builders<BsonDocument>.Filter.Empty).ToList().ToArray();
+            var platforms = collection.Distinct<string>("platform", Builders<BsonDocument>.Filter.Empty).ToList().ToArray();
+
+            taggroups.Add(new TaggroupVO("基地", bases));
+            taggroups.Add(new TaggroupVO("弹型", missileNos));
+            taggroups.Add(new TaggroupVO("发射平台", platforms));
+
+            return taggroups;
+        }
+
         #endregion
+
+        #region overlay表增删改查
+        public List<OverlayBO> GetOverlays()
+        {
+            List<OverlayBO> bos = new List<OverlayBO>();
+
+            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                    .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+
+            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<OverlayBO>(doc);
+                bos.Add(bo);
+            }
+            return bos;
+        }
+        public OverlayBO GetOverlay(string id)
+        {
+            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                   .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<OverlayBO>(doc);
+                return bo;
+            }
+            return null;
+        }
+        public string AddOverlay(OverlayBO bo)
+        {
+            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                    .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+
+            var document = bo.ToBsonDocument();
+            collection.InsertOne(document);
+            return document.GetValue("_id").ToString();
+        }
+        public bool UpdateOverlay(string id, OverlayBO bo)
+        {
+            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                   .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var update = Builders<BsonDocument>.Update.Set("addend", bo.addend)
+                                                    .Set("augend", bo.augend)
+                                                    .Set("result", bo.result);
+
+            var result = collection.UpdateOne(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        public bool DeleteOverlay(string id)
+        {
+            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                   .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+            var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var result = collection.DeleteOne(deleteFilter);
+            return result.DeletedCount > 0;
+        }
+        #endregion
+
+        #region Rule表增删改查
+        public List<RuleBo> GetRules()
+        {
+            List<RuleBo> bos = new List<RuleBo>();
+
+            var collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+
+            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<RuleBo>(doc);
+                bos.Add(bo);
+            }
+            return bos;
+        }
+        public RuleBo GetRule(string id)
+        {
+            var collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<RuleBo>(doc);
+                return bo;
+            }
+            return null;
+        }
+        public string AddRule(RuleBo bo)
+        {
+            var collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+
+            var document = bo.ToBsonDocument();
+            collection.InsertOne(document);
+            return document.GetValue("_id").ToString();
+        }
+        public bool UpdateRule(string id, RuleBo bo)
+        {
+            var collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                  .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var update = Builders<BsonDocument>.Update.Set("name", bo.name)
+                                                    .Set("unit", bo.unit)
+                                                    .Set("limits", bo.limits)
+                                                    .Set("description", bo.description);
+
+            var result = collection.UpdateOne(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        public bool DeleteRule(string id)
+        {
+            var collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+            var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var result = collection.DeleteOne(deleteFilter);
+            return result.DeletedCount > 0;
+        }
+        #endregion
+
+        #region timeindex表增删改查
+        public List<TimeindexBO> GetTimeindexs()
+        {
+            List<TimeindexBO> bos = new List<TimeindexBO>();
+
+            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+
+            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<TimeindexBO>(doc);
+                bos.Add(bo);
+            }
+            return bos;
+        }
+        public TimeindexBO GetTimeindex(string id)
+        {
+            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<TimeindexBO>(doc);
+                return bo;
+            }
+            return null;
+        }
+        public string AddTimeindex(TimeindexBO bo)
+        {
+            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+
+            var document = bo.ToBsonDocument();
+            collection.InsertOne(document);
+            return document.GetValue("_id").ToString();
+        }
+        public bool UpdateTimeindex(string id, TimeindexBO bo)
+        {
+            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                 .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var update = Builders<BsonDocument>.Update.Set("platform", bo.platform)
+                                                    .Set("missileNo", bo.missileNo)
+                                                    .Set("prepareTime", bo.prepareTime)
+                                                    .Set("targetBindingTime", bo.targetBindingTime)
+                                                    .Set("defenseBindingTime", bo.defenseBindingTime);
+            var result = collection.UpdateOne(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        public bool DeleteTimeindex(string id)
+        {
+            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+            var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var result = collection.DeleteOne(deleteFilter);
+            return result.DeletedCount > 0;
+        }
+
+        public TimeindexBO QueryTimeindex(string platform, string missileNo)
+        {
+            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+
+            var filter = Builders<BsonDocument>.Filter;
+
+            var list = collection.Find(filter.Eq("platform", platform)
+                                                & filter.Eq("missileNo", missileNo)
+                                                ).ToList();
+            foreach (var doc in list)
+            {
+                var bo = (TimeindexBO)BsonSerializer.Deserialize<TimeindexBO>(doc);
+                return bo;
+            }
+            return null;
+        }
+
+        #endregion
+
+
+        private void InfoChanged()
+        {
+            // 修改了调用HFJ的接口通知
+            string url = _urlConfig.InfoChanged;// "http://localhost:7011/infochanged";
+            try
+            {
+                Task<string> s = GetAsyncJson(url);
+                s.Wait();
+                Console.WriteLine("HFJ的infochanged接口被调用了");
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("HFJ的infochanged接口出错了");
+            }
+        }
+        private static async Task<string> GetAsyncJson(string url)
+        {
+            HttpClient client = new HttpClient();
+            //HttpContent content = new StringContent();
+            //content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            HttpResponseMessage response = await client.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+            return responseBody;
+        }
     }
 }

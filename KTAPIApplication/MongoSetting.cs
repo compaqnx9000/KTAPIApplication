@@ -13,8 +13,8 @@ namespace SystemAPIApplication
     public class MongoSetting
     {
         /// <summary>
-        　　/// 数据库连接字符串
-        　　/// </summary>
+        /// 数据库连接字符串
+        /// </summary>
         public string IP { get; set; }
         public string Port { get; set; }
         public string Username { get; set; }
@@ -24,6 +24,9 @@ namespace SystemAPIApplication
         public DBSetting MockSetting { get; set; }
         public DBSetting ConfigSetting { get; set; }
         public DBSetting DescriptionSetting { get; set; }
+        public DBSetting OverlaySetting { get; set; }
+        public DBSetting RuleSetting { get; set; }
+        public DBSetting TimeindexSetting { get; set; }
     }
 
     public class MongoOtherSetting

@@ -31,9 +31,11 @@ namespace KTAPIApplication.Controllers
             //var htmlContent = TemplateGenerator.GetPDFHTMLString(warBase, brigade);
 
             //生成PDF
-            var pdfBytes = _PDFService.CreatePDF(warBase, brigade);
+            //var pdfBytes = _PDFService.CreatePDF(warBase, brigade);
 
-            return File(pdfBytes, "application/pdf");
+            //return File(pdfBytes, "application/pdf");
+
+            return null;
         }
     }
 }

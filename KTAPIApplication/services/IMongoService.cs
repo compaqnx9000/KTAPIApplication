@@ -24,6 +24,8 @@ namespace KTAPIApplication.Services
         List<InfoBO> QueryInfoAll();
         List<InfoBO> QueryInfoByBrigade(string brigade);
 
+        List<TaggroupVO> Taggroup();
+
 
         /* config表操作 */
         Dictionary<string, ConfigBO> QueryConfigAll();
@@ -46,6 +48,29 @@ namespace KTAPIApplication.Services
         string AddInfo(InfoBO bo);
         bool UpdateInfo(string id, InfoBO bo);
         bool DeleteInfo(string id);
+
+        /* overlay表操作 */
+        List<OverlayBO> GetOverlays();
+        OverlayBO GetOverlay(string id);
+        string AddOverlay(OverlayBO bo);
+        bool UpdateOverlay(string id, OverlayBO bo);
+        bool DeleteOverlay(string id);
+
+        /* rule表操作 */
+        List<RuleBo> GetRules();
+        RuleBo GetRule(string id);
+        string AddRule(RuleBo bo);
+        bool UpdateRule(string id, RuleBo bo);
+        bool DeleteRule(string id);
+
+        /* timeindex表操作 */
+        List<TimeindexBO> GetTimeindexs();
+        TimeindexBO GetTimeindex(string id);
+        string AddTimeindex(TimeindexBO bo);
+        bool UpdateTimeindex(string id, TimeindexBO bo);
+        bool DeleteTimeindex(string id);
+        TimeindexBO QueryTimeindex(string platform,string missileNo);
+
 
     }
 }

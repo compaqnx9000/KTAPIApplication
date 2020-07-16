@@ -49,5 +49,6 @@ namespace KTAPIApplication.bo
         public double prepareTime { get; set; }
         public double targetBindingTime { get; set; }
         public double defenseBindingTime { get; set; }
+        public double fireRange { get; set; }
     }
 }

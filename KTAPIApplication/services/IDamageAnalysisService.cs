@@ -1,11 +1,7 @@
 ﻿using KTAPIApplication.bo;
-using KTAPIApplication.enums;
 using KTAPIApplication.vo;
 using MongoDB.Bson;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace KTAPIApplication.services
 {
@@ -13,7 +9,7 @@ namespace KTAPIApplication.services
     {
         int TargetEffects(List<BsonDocument> mocks,List<InfoBO> infos, Dictionary<string, ConfigBO> configs);
 
-        DamageEnumeration Fallout(double lon, double lat, double alt_ft, double equivalent_kt, double windSpeed_mph, double angle, double rads01, double rads02, double rads03);
+        MyCore.enums.DamageEnumeration Fallout(double lon, double lat, double alt_ft, double equivalent_kt, double windSpeed_mph, double angle, double rads01, double rads02, double rads03);
 
         List<BaseVO> Query();
 

@@ -1,6 +1,4 @@
 ﻿using KTAPIApplication.bo;
-using KTAPIApplication.core;
-using KTAPIApplication.enums;
 using KTAPIApplication.Services;
 using KTAPIApplication.vo;
 using MongoDB.Bson;
@@ -8,19 +6,14 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace KTAPIApplication.services
 {
-    
-
-
     public class DamageAnalysisService : IDamageAnalysisService
     {
         private readonly IMongoService _mongoService;
 
-        MyAnalyse _analyse = new MyAnalyse();
+        MyCore.MyAnalyse _analyse = new MyCore.MyAnalyse();
 
         public DamageAnalysisService(IMongoService mongoService)
         {
@@ -212,7 +205,7 @@ namespace KTAPIApplication.services
                     //double z = info.GetValue("z").ToDouble();
 
                     //求爆点和8种Target的距离
-                    double dis = Utils.Translate.GetDistance(lat, lon, info.lat, info.lon);
+                    double dis = MyCore.Utils.Translate.GetDistance(lat, lon, info.lat, info.lon);
 
                     //先把5种损伤计算的值求出来
                     double psi = info.shock_wave_01;
@@ -226,7 +219,7 @@ namespace KTAPIApplication.services
                         // 对《营区》有影响的是 [冲击波 & 光辐射] ，取2种损伤最大的
                         var result1 = Airblast(dis, yield/1000, alt * 3.2808399, info.shock_wave_01,info.shock_wave_02,info.shock_wave_03);
                         var result2 = ThermalRadiation(dis, yield/1000, alt * 3.2808399, info.thermal_radiation_01,info.thermal_radiation_02,info.thermal_radiation_03);
-                        var result = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
                     }
                     else if (info.platform.Equals("中心库"))
@@ -234,7 +227,7 @@ namespace KTAPIApplication.services
                         // 对《中心库》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
                         var result1 = Airblast(dis, yield/1000, alt * 3.2808399, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
                         var result2 = NuclearPulse(dis / 1000, yield, alt/1000, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
-                        var result = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
                     }
                     else if (info.platform.Equals("待机库"))
@@ -242,7 +235,7 @@ namespace KTAPIApplication.services
                         // 对《待机库》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
                         var result1 = Airblast(dis, yield/1000, alt * 3.2808399, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
                         var result2 = NuclearPulse(dis / 1000, yield, alt/1000, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
-                        var result = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
                     }
                     else if (info.platform.Equals("发射井"))
@@ -256,7 +249,7 @@ namespace KTAPIApplication.services
                         // 对《发射场》有影响的是[ 冲击波 & 核辐射 ] ，取2种损伤最大的
                         var result1 = Airblast(dis, yield/1000, alt * 3.2808399, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
                         var result2 = NuclearRadiation(dis, yield/1000, alt * 3.2808399, info.nuclear_radiation_01,info.nuclear_radiation_02,info.nuclear_radiation_03);
-                        var result = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
                     }
                     else if (info.platform.Equals("通信站"))
@@ -264,7 +257,7 @@ namespace KTAPIApplication.services
                         // 对《通信站》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
                         var result1 = Airblast(dis, yield/1000, alt * 3.2808399, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
                         var result2 = NuclearPulse(dis / 1000, yield, alt/1000, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
-                        var result = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
                     }
                     else if (info.platform.Equals("发射车"))
@@ -275,10 +268,10 @@ namespace KTAPIApplication.services
                         var result3 = NuclearRadiation(dis, yield/1000, alt * 3.2808399, info.nuclear_radiation_01, info.nuclear_radiation_02, info.nuclear_radiation_03);
                         var result4 = NuclearPulse(dis/1000, yield, alt/1000, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
 
-                        var result12 = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        var result34 = (DamageEnumeration)Math.Max(result3.GetHashCode(), result4.GetHashCode());
+                        var result12 = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result34 = (MyCore.enums.DamageEnumeration)Math.Max(result3.GetHashCode(), result4.GetHashCode());
 
-                        var result = (DamageEnumeration)Math.Max(result12.GetHashCode(), result34.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result12.GetHashCode(), result34.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
 
                     }
@@ -289,9 +282,9 @@ namespace KTAPIApplication.services
                         var result2 = ThermalRadiation(dis, yield/1000, alt * 3.2808399, info.thermal_radiation_01, info.thermal_radiation_02, info.thermal_radiation_03);
                         var result3 = NuclearRadiation(dis, yield/1000, alt * 3.2808399, info.nuclear_radiation_01, info.nuclear_radiation_02, info.nuclear_radiation_03);
 
-                        var result12 = (DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                        var result12 = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
 
-                        var result = (DamageEnumeration)Math.Max(result12.GetHashCode(), result3.GetHashCode());
+                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result12.GetHashCode(), result3.GetHashCode());
                         info.nuclear_warheads.Add(nuclearExplosionID + "," + result);
                     }
                 }
@@ -300,7 +293,7 @@ namespace KTAPIApplication.services
             return 0;
         }
 
-        private DamageEnumeration Airblast(double dis, double yield, double ft, double psi01, double psi02, double psi03)
+        private MyCore.enums.DamageEnumeration Airblast(double dis, double yield, double ft, double psi01, double psi02, double psi03)
         {
             // 冲击波。
 
@@ -308,28 +301,28 @@ namespace KTAPIApplication.services
             double r2 = _analyse.CalcShockWaveRadius(yield,ft, psi02);
             double r3 = _analyse.CalcShockWaveRadius(yield,ft, psi03);
 
-            if (dis <= r3) return DamageEnumeration.Destroy;
-            if (dis <= r2) return DamageEnumeration.Heavy;
-            if (dis <= r1) return DamageEnumeration.Light;
+            if (dis <= r3) return MyCore.enums.DamageEnumeration.Destroy;
+            if (dis <= r2) return MyCore.enums.DamageEnumeration.Heavy;
+            if (dis <= r1) return MyCore.enums.DamageEnumeration.Light;
 
-            return DamageEnumeration.Safe;
+            return MyCore.enums.DamageEnumeration.Safe;
         }
-        private DamageEnumeration NuclearRadiation(double dis, double yield, double altitude, double rem01, double rem02, double rem03)
+        private MyCore.enums.DamageEnumeration NuclearRadiation(double dis, double yield, double altitude, double rem01, double rem02, double rem03)
         {
             // 核辐射
 
            
-            double r1 = _analyse.CalcNuclearRadiationRadius(yield, altitude, Utils.Helpers.Convert.ToRem(1));
-            double r2 = _analyse.CalcNuclearRadiationRadius(yield, altitude, Utils.Helpers.Convert.ToRem(2));
-            double r3 = _analyse.CalcNuclearRadiationRadius(yield, altitude, Utils.Helpers.Convert.ToRem(3));
+            double r1 = _analyse.CalcNuclearRadiationRadius(yield, altitude, MyCore.Utils.Helpers.Convert.ToRem(1));
+            double r2 = _analyse.CalcNuclearRadiationRadius(yield, altitude, MyCore.Utils.Helpers.Convert.ToRem(2));
+            double r3 = _analyse.CalcNuclearRadiationRadius(yield, altitude, MyCore.Utils.Helpers.Convert.ToRem(3));
 
-            if (dis <= r3) return DamageEnumeration.Destroy;
-            if (dis <= r2) return DamageEnumeration.Heavy;
-            if (dis <= r1) return DamageEnumeration.Light;
+            if (dis <= r3) return MyCore.enums.DamageEnumeration.Destroy;
+            if (dis <= r2) return MyCore.enums.DamageEnumeration.Heavy;
+            if (dis <= r1) return MyCore.enums.DamageEnumeration.Light;
 
-            return DamageEnumeration.Safe;
+            return MyCore.enums.DamageEnumeration.Safe;
         }
-        private DamageEnumeration ThermalRadiation(double dis, double yield, double ft, double cal01, double cal02, double cal03)
+        private MyCore.enums.DamageEnumeration ThermalRadiation(double dis, double yield, double ft, double cal01, double cal02, double cal03)
         {
             // 光辐射
 
@@ -337,13 +330,13 @@ namespace KTAPIApplication.services
             double r2 = _analyse.GetThermalRadiationR(yield, ft,cal02);
             double r3 = _analyse.GetThermalRadiationR(yield, ft,cal03);
 
-            if (dis <= r3) return DamageEnumeration.Destroy;
-            if (dis <= r2) return DamageEnumeration.Heavy;
-            if (dis <= r1) return DamageEnumeration.Light;
+            if (dis <= r3) return MyCore.enums.DamageEnumeration.Destroy;
+            if (dis <= r2) return MyCore.enums.DamageEnumeration.Heavy;
+            if (dis <= r1) return MyCore.enums.DamageEnumeration.Light;
 
-            return DamageEnumeration.Safe;
+            return MyCore.enums.DamageEnumeration.Safe;
         }
-        private DamageEnumeration NuclearPulse(double dis, double yield, double km, double vm01, double vm02, double vm03)
+        private MyCore.enums.DamageEnumeration NuclearPulse(double dis, double yield, double km, double vm01, double vm02, double vm03)
         {
             // 核电磁脉冲
 
@@ -351,11 +344,11 @@ namespace KTAPIApplication.services
             double r2 = _analyse.CalcNuclearPulseRadius(yield, km, vm02);
             double r3 = _analyse.CalcNuclearPulseRadius(yield, km, vm03);
 
-            if (dis <= r3) return DamageEnumeration.Destroy;
-            if (dis <= r2) return DamageEnumeration.Heavy;
-            if (dis <= r1) return DamageEnumeration.Light;
+            if (dis <= r3) return MyCore.enums.DamageEnumeration.Destroy;
+            if (dis <= r2) return MyCore.enums.DamageEnumeration.Heavy;
+            if (dis <= r1) return MyCore.enums.DamageEnumeration.Light;
 
-            return DamageEnumeration.Safe;
+            return MyCore.enums.DamageEnumeration.Safe;
         }
         /// <summary>
         /// 返回核沉降
@@ -370,13 +363,13 @@ namespace KTAPIApplication.services
         /// <param name="rads02"></param>
         /// <param name="rads03"></param>
         /// <returns></returns>
-        public DamageEnumeration Fallout(double lon,double lat,double alt_ft,double equivalent_kt,double windSpeed_mph, double angle,double rads01, double rads02, double rads03)
+        public MyCore.enums.DamageEnumeration Fallout(double lon,double lat,double alt_ft,double equivalent_kt,double windSpeed_mph, double angle,double rads01, double rads02, double rads03)
         {
             // 放射性核沉降 =》人员
             //List<Coor> g1 =_analyse.CalcRadioactiveFalloutRegion(lon, lat, alt_ft, equivalent_kt, windSpeed_mph, angle,DamageEnumeration.Light);
             //List<Coor> g2 = _analyse.CalcRadioactiveFalloutRegion(lon, lat, alt_ft, equivalent_kt, windSpeed_mph, angle, DamageEnumeration.Heavy);
             //List<Coor> g3 = _analyse.CalcRadioactiveFalloutRegion(lon, lat, alt_ft, equivalent_kt, windSpeed_mph, angle, DamageEnumeration.Destroy);
-            return DamageEnumeration.Safe;
+            return MyCore.enums.DamageEnumeration.Safe;
         }
 
         private void AddTargetVOs(string bs, string brigade, ref List<InfoBO> infos, ref List<TargetVO> targetVOs, string clsName)
@@ -425,6 +418,8 @@ namespace KTAPIApplication.services
             if (level > 3) level = 3;
             return level;
         }
+
+        
 
     }
 }

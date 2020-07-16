@@ -107,7 +107,7 @@ namespace KTAPIApplication.Controllers
             _analysisService.TargetEffects(mocks, infos, configs);
 
             Report report = new Report();
-            report.AttackTime = Utils.Util.GetTimeStamp();
+            report.AttackTime = MyCore.Utils.Util.GetTimeStamp();
 
             foreach (var mock in mocks)
             {
@@ -119,7 +119,7 @@ namespace KTAPIApplication.Controllers
                     double lat = mock.GetValue("Lat").AsDouble;
                     double alt = mock.GetValue("Alt").AsDouble;
                     double yield = mock.GetValue("Yield").AsDouble;
-                    report.Missiles.Add(new Missile(Utils.Util.GetTimeStamp(occurTime), yield, lon, lat, alt));
+                    report.Missiles.Add(new Missile(MyCore.Utils.Util.GetTimeStamp(occurTime), yield, lon, lat, alt));
                 }
                 catch (Exception)
                 {
