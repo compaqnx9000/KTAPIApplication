@@ -1,6 +1,5 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Controllers;
-using KTAPIApplication.services;
 using KTAPIApplication.vo;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -15,15 +14,12 @@ namespace KTAPIApplication.Services
     {
         List<BaseVO> Query();
 
-        VueVO QueryByBrigade(string brigade);
-
-        List<BsonDocument> QueryMockAll();
-        List<BsonDocument> QueryMock(string nuclearExplosionID);
+        List<MockBO> QueryMockAll();
+        List<MockBO> QueryMock(string nuclearExplosionID);
 
         /* info表操作 */
         List<InfoBO> QueryInfoAll();
         List<InfoBO> QueryInfoByBrigade(string brigade);
-
         List<TaggroupVO> Taggroup();
 
 
@@ -35,12 +31,28 @@ namespace KTAPIApplication.Services
         bool DeleteConfig(string id);
         string AddConfig(ConfigBO config);
 
+        Task<IEnumerable<ConfigBO>> GetConfigsAsync();
+
         /* description表操作 */
         List<DescriptionBO> GetDescriptions();
         DescriptionBO GetDescription(string id);
         string AddDescription(DescriptionBO bo);
         bool UpdateDescription(string id, DescriptionBO bo);
         bool DeleteDescription(string id);
+
+        /* factor表操作 */
+        List<FactorBO> GetFactors();
+        FactorBO GetFactor(string id);
+        string AddFactor(FactorBO bo);
+        bool UpdateFactor(string id, FactorBO bo);
+        bool DeleteFactor(string id);
+
+        /* DamageLevel表操作 */
+        List<DamageLevelBO> GetDamageLevels();
+        DamageLevelBO GetDamageLevel(string id);
+        string AddDamageLevel(DamageLevelBO bo);
+        bool UpdateDamageLevel(string id, DamageLevelBO bo);
+        bool DeleteDamageLevel(string id);
 
         /* info表操作 */
         List<InfoBO> GetInfos();

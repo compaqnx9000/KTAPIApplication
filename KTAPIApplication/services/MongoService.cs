@@ -1,6 +1,5 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Controllers;
-using KTAPIApplication.services;
 using KTAPIApplication.vo;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -96,84 +95,27 @@ namespace KTAPIApplication.Services
         }
         public List<InfoBO> QueryInfoAll()
         {
-            List<InfoBO> infos = new List<InfoBO>();
             var collection = _client.GetDatabase(_config.InfoSetting.Database).
-              GetCollection<BsonDocument>(_config.InfoSetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var info = BsonSerializer.Deserialize<InfoBO>(doc);
-                infos.Add(info);
-            }
-            return infos;
+              GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            return collection.Find(Builders<InfoBO>.Filter.Empty).ToList();
         }
-        public List<BsonDocument> QueryMockAll()
+        public List<MockBO> QueryMockAll()
         {
-            var collection = _otherClient.GetDatabase(_otherConfig.MockSetting.Database).GetCollection<BsonDocument>(_otherConfig.MockSetting.Collection);
-            return collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
+            var collection = _otherClient.GetDatabase(_otherConfig.MockSetting.Database).GetCollection<MockBO>(_otherConfig.MockSetting.Collection);
+            return collection.Find(Builders<MockBO>.Filter.Empty).ToList();
         }
 
-        public List<BsonDocument> QueryMock(string nuclearExplosionID)
+        public List<MockBO> QueryMock(string nuclearExplosionID)
         {
-            var collection = _otherClient.GetDatabase(_otherConfig.MockSetting.Database).GetCollection<BsonDocument>(_otherConfig.MockSetting.Collection);
-            var filter = Builders<BsonDocument>.Filter;
-            return collection.Find(filter.Eq("NuclearExplosionID", nuclearExplosionID)).ToList();
+            var collection = _otherClient.GetDatabase(_otherConfig.MockSetting.Database).GetCollection<MockBO>(_otherConfig.MockSetting.Collection);
+            return collection.Find(Builders<MockBO>.Filter.Eq("NuclearExplosionID", nuclearExplosionID)).ToList();
         }
 
         public List<InfoBO> QueryInfoByBrigade(string brigade)
         {
-            var collection = _otherClient.GetDatabase(_config.InfoSetting.Database).GetCollection<BsonDocument>(_config.InfoSetting.Collection);
-            var filter = Builders<BsonDocument>.Filter;
-            //return collection.Find(filter.Eq("brigade", brigade)).ToList();
-
-            var list = collection.Find(filter.Eq("brigade", brigade)).ToList();
-
-            List<InfoBO> infos = new List<InfoBO>();
-
-            foreach (var doc in list)
-            {
-                var info = BsonSerializer.Deserialize<InfoBO>(doc);
-                infos.Add(info);
-            }
-            return infos;
-        }
-
-
-        public VueVO QueryByBrigade(string brigade)
-        {
-            var collection = _client.GetDatabase(_config.InfoSetting.Database).
-                GetCollection<BsonDocument>(_config.InfoSetting.Collection);
-
-
-
-            double info_Lon = 0; double info_Lat = 0; double mock_Lon = 0;
-            double mock_Lat = 0; double mock_Alt = 0; double mock_Yield = 0; string mock_Date = "";
-
-            var filter = Builders<BsonDocument>.Filter;
-            var docs_01 = collection.Find(filter.Eq("brigade", brigade)).ToList();
-            if (docs_01.Count > 0)
-            {
-                info_Lon = docs_01[0].GetValue("lon").AsDouble;
-                info_Lat = docs_01[0].GetValue("lat").AsDouble;
-
-            }
-
-            var collection2 = _client.GetDatabase(_config.MockSetting.Database).
-                GetCollection<BsonDocument>(_config.MockSetting.Collection);
-            var filter2 = Builders<BsonDocument>.Filter;
-            var docs_02 = collection2.Find(filter2.Empty).ToList();
-            if (docs_02.Count > 0)
-            {
-                mock_Lon = docs_02[0].GetValue("Lon").AsDouble;
-                mock_Lat = docs_02[0].GetValue("Lat").AsDouble;
-                mock_Alt = docs_02[0].GetValue("Alt").AsDouble;
-                mock_Yield = docs_02[0].GetValue("Yield").AsDouble;
-                mock_Date = docs_02[0].GetValue("OccurTime").ToString();
-            }
-
-            return new VueVO(info_Lon, info_Lat, mock_Lon,
-             mock_Lat, mock_Alt, mock_Yield, mock_Date);
+            IMongoCollection<InfoBO> collection = _otherClient.GetDatabase(_config.InfoSetting.Database)
+                                         .GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            return collection.Find(Builders<InfoBO>.Filter.Eq("brigade", brigade)).ToList();
         }
 
         public List<BaseVO> Query()
@@ -322,32 +264,19 @@ namespace KTAPIApplication.Services
         }
         public List<ConfigBO> GetConfigs()
         {
-            List<ConfigBO> configs = new List<ConfigBO>();
+            IMongoCollection<ConfigBO> collection = _client.GetDatabase(_config.ConfigSetting.Database)
+                                    .GetCollection<ConfigBO>(_config.ConfigSetting.Collection);
 
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.ConfigSetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var config = BsonSerializer.Deserialize<ConfigBO>(doc);
-                configs.Add(config);
-            }
-            return configs;
+            return collection.Find(Builders<ConfigBO>.Filter.Empty).ToList();
         }
 
         public ConfigBO GetConfig(string id)
         {
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.ConfigSetting.Collection);
-            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
-            foreach (var doc in list)
-            {
-                var config = BsonSerializer.Deserialize<ConfigBO>(doc);
-                return config;
-            }
-            return null;
+            IMongoCollection<ConfigBO> collection = _client.GetDatabase(_config.ConfigSetting.Database)
+                                    .GetCollection<ConfigBO>(_config.ConfigSetting.Collection);
+            return collection.Find(Builders<ConfigBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
+
         public bool UpdateConfig(string id, ConfigBO config)
         {
             var collection = _client.GetDatabase(_config.ConfigSetting.Database)
@@ -356,7 +285,8 @@ namespace KTAPIApplication.Services
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
 
-            var update = Builders<BsonDocument>.Update.Set("shock_wave_01", config.shock_wave_01)
+            var update = Builders<BsonDocument>.Update.Set("platform", config.platform)
+                                                        .Set("shock_wave_01", config.shock_wave_01)
                                                         .Set("shock_wave_02", config.shock_wave_02)
                                                         .Set("shock_wave_03", config.shock_wave_03)
                                                         .Set("nuclear_radiation_01", config.nuclear_radiation_01)
@@ -367,11 +297,7 @@ namespace KTAPIApplication.Services
                                                         .Set("thermal_radiation_03", config.thermal_radiation_03)
                                                         .Set("nuclear_pulse_01", config.nuclear_pulse_01)
                                                         .Set("nuclear_pulse_02", config.nuclear_pulse_02)
-                                                        .Set("nuclear_pulse_03", config.nuclear_pulse_03)
-                                                        .Set("fallout_01", config.fallout_01)
-                                                        .Set("fallout_02", config.fallout_02)
-                                                        .Set("fallout_03", config.fallout_03)
-                                                        ;
+                                                        .Set("nuclear_pulse_03", config.nuclear_pulse_03);
 
             var result = collection.UpdateOne(filter, update);
             return result.ModifiedCount > 0;
@@ -393,8 +319,16 @@ namespace KTAPIApplication.Services
             var document = config.ToBsonDocument();
             collection.InsertOne(document);
             return document.GetValue("_id").ToString();
-
         }
+
+        public async  Task<IEnumerable<ConfigBO>> GetConfigsAsync()
+        {
+            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
+                                    .GetCollection<ConfigBO>(_config.ConfigSetting.Collection);
+
+            return await collection.Find(Builders<ConfigBO>.Filter.Empty).ToListAsync();
+        }
+
         #endregion
 
         #region Description表增删改查
@@ -404,30 +338,15 @@ namespace KTAPIApplication.Services
         /// <returns></returns>
         public List<DescriptionBO> GetDescriptions()
         {
-            List<DescriptionBO> descriptions = new List<DescriptionBO>();
-
-            var collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.DescriptionSetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var description = BsonSerializer.Deserialize<DescriptionBO>(doc);
-                descriptions.Add(description);
-            }
-            return descriptions;
+            IMongoCollection<DescriptionBO> collection = _client.GetDatabase(_config.DescriptionSetting.Database)
+                                    .GetCollection<DescriptionBO>(_config.DescriptionSetting.Collection);
+            return collection.Find(Builders<DescriptionBO>.Filter.Empty).ToList();
         }
         public DescriptionBO GetDescription(string id)
         {
-            var collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.DescriptionSetting.Collection);
-            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
-            foreach (var doc in list)
-            {
-                var config = BsonSerializer.Deserialize<DescriptionBO>(doc);
-                return config;
-            }
-            return null;
+            IMongoCollection<DescriptionBO> collection = _client.GetDatabase(_config.DescriptionSetting.Database)
+                                    .GetCollection<DescriptionBO>(_config.DescriptionSetting.Collection);
+            return collection.Find(Builders<DescriptionBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddDescription(DescriptionBO bo)
         {
@@ -445,9 +364,6 @@ namespace KTAPIApplication.Services
                                     .GetCollection<BsonDocument>(_config.DescriptionSetting.Collection);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
-
-
-
 
             var update = Builders<BsonDocument>.Update.Set("name", bo.name)
                                                     .Set("level_01", bo.level_01)
@@ -468,33 +384,124 @@ namespace KTAPIApplication.Services
 
         #endregion
 
+        #region Factor表增删改查
+        /// <summary>
+        /// 获取所有的Factor表记录。
+        /// </summary>
+        /// <returns></returns>
+        public List<FactorBO> GetFactors()
+        {
+            IMongoCollection<FactorBO> collection = _client.GetDatabase(_config.FactorSetting.Database)
+                                    .GetCollection<FactorBO>(_config.FactorSetting.Collection);
+            return collection.Find(Builders<FactorBO>.Filter.Empty).ToList();
+        }
+        public FactorBO GetFactor(string id)
+        {
+            IMongoCollection<FactorBO> collection = _client.GetDatabase(_config.FactorSetting.Database)
+                                    .GetCollection<FactorBO>(_config.FactorSetting.Collection);
+            return collection.Find(Builders<FactorBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
+        }
+        public string AddFactor(FactorBO bo)
+        {
+            var collection = _client.GetDatabase(_config.FactorSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.FactorSetting.Collection);
+
+            var document = bo.ToBsonDocument();
+            collection.InsertOne(document);
+            return document.GetValue("_id").ToString();
+
+        }
+        public bool UpdateFactor(string id, FactorBO bo)
+        {
+            var collection = _client.GetDatabase(_config.FactorSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.FactorSetting.Collection);
+
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var update = Builders<BsonDocument>.Update.Set("level_01", bo.level_01)
+                                                    .Set("level_02", bo.level_02)
+                                                    .Set("level_03", bo.level_03);
+            var result = collection.UpdateOne(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        public bool DeleteFactor(string id)
+        {
+            var collection = _client.GetDatabase(_config.FactorSetting.Database)
+                                        .GetCollection<BsonDocument>(_config.FactorSetting.Collection);
+            var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var result = collection.DeleteOne(deleteFilter);
+            return result.DeletedCount > 0;
+        }
+
+        #endregion
+
+        #region DamageLevel表增删改查
+        /// <summary>
+        /// 获取所有的DamageLevel表记录。
+        /// </summary>
+        /// <returns></returns>
+        public List<DamageLevelBO> GetDamageLevels()
+        {
+            IMongoCollection<DamageLevelBO> collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
+                                    .GetCollection<DamageLevelBO>(_config.DamageLevelSetting.Collection);
+            return collection.Find(Builders<DamageLevelBO>.Filter.Empty).ToList();
+        }
+        public DamageLevelBO GetDamageLevel(string id)
+        {
+            IMongoCollection<DamageLevelBO> collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
+                                    .GetCollection<DamageLevelBO>(_config.DamageLevelSetting.Collection);
+            return collection.Find(Builders<DamageLevelBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
+        }
+        public string AddDamageLevel(DamageLevelBO bo)
+        {
+            var collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.DamageLevelSetting.Collection);
+
+            var document = bo.ToBsonDocument();
+            collection.InsertOne(document);
+            return document.GetValue("_id").ToString();
+
+        }
+        public bool UpdateDamageLevel(string id, DamageLevelBO bo)
+        {
+            var collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
+                                    .GetCollection<BsonDocument>(_config.DamageLevelSetting.Collection);
+
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var update = Builders<BsonDocument>.Update.Set("min", bo.min)
+                                                    .Set("max", bo.max)
+                                                    .Set("counter", bo.counter)
+                                                    .Set("description", bo.description)
+                                                    .Set("summary", bo.summary);
+            var result = collection.UpdateOne(filter, update);
+            return result.ModifiedCount > 0;
+        }
+        public bool DeleteDamageLevel(string id)
+        {
+            var collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
+                                        .GetCollection<BsonDocument>(_config.DamageLevelSetting.Collection);
+            var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
+
+            var result = collection.DeleteOne(deleteFilter);
+            return result.DeletedCount > 0;
+        }
+
+        #endregion
+
         #region Info表增删改查
         public List<InfoBO> GetInfos()
         {
-            List<InfoBO> infos = new List<InfoBO>();
-
-            var collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var info = BsonSerializer.Deserialize<InfoBO>(doc);
-                infos.Add(info);
-            }
-            return infos;
+            IMongoCollection<InfoBO> collection = _client.GetDatabase(_config.InfoSetting.Database)
+                                    .GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            return collection.Find(Builders<InfoBO>.Filter.Empty).ToList();
         }
         public InfoBO GetInfo(string id)
         {
-            var collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
-            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
-            foreach (var doc in list)
-            {
-                var info = BsonSerializer.Deserialize<InfoBO>(doc);
-                return info;
-            }
-            return null;
+            IMongoCollection<InfoBO> collection = _client.GetDatabase(_config.InfoSetting.Database)
+                                    .GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            return collection.Find(Builders<InfoBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddInfo(InfoBO bo)
         {
@@ -505,7 +512,6 @@ namespace KTAPIApplication.Services
             collection.InsertOne(document);
 
             InfoChanged();
-
 
             return document.GetValue("_id").ToString();
         }
@@ -543,6 +549,9 @@ namespace KTAPIApplication.Services
                                                     .Set("fallout_02", bo.fallout_02)
                                                     .Set("fallout_03", bo.fallout_03)
                                                     .Set("warBase", bo.warBase)
+                                                    .Set("prepareTime" ,bo.prepareTime)
+                                                    .Set("targetBindingTime" ,bo.targetBindingTime)
+                                                    .Set("defenseBindingTime" ,bo.defenseBindingTime)
                                                     .Set("fireRange",bo.fireRange);
 
 
@@ -588,30 +597,15 @@ namespace KTAPIApplication.Services
         #region overlay表增删改查
         public List<OverlayBO> GetOverlays()
         {
-            List<OverlayBO> bos = new List<OverlayBO>();
-
-            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                    .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var bo = BsonSerializer.Deserialize<OverlayBO>(doc);
-                bos.Add(bo);
-            }
-            return bos;
+            IMongoCollection<OverlayBO> collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                    .GetCollection<OverlayBO>(_config.OverlaySetting.Collection);
+            return collection.Find(Builders<OverlayBO>.Filter.Empty).ToList();
         }
         public OverlayBO GetOverlay(string id)
         {
-            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                   .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
-            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
-            foreach (var doc in list)
-            {
-                var bo = BsonSerializer.Deserialize<OverlayBO>(doc);
-                return bo;
-            }
-            return null;
+            IMongoCollection<OverlayBO> collection = _client.GetDatabase(_config.OverlaySetting.Database)
+                                   .GetCollection<OverlayBO>(_config.OverlaySetting.Collection);
+            return collection.Find(Builders<OverlayBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddOverlay(OverlayBO bo)
         {
@@ -650,30 +644,15 @@ namespace KTAPIApplication.Services
         #region Rule表增删改查
         public List<RuleBo> GetRules()
         {
-            List<RuleBo> bos = new List<RuleBo>();
-
-            var collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var bo = BsonSerializer.Deserialize<RuleBo>(doc);
-                bos.Add(bo);
-            }
-            return bos;
+            IMongoCollection<RuleBo> collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                    .GetCollection<RuleBo>(_config.RuleSetting.Collection);
+            return collection.Find(Builders<RuleBo>.Filter.Empty).ToList();
         }
         public RuleBo GetRule(string id)
         {
-            var collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                   .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
-            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
-            foreach (var doc in list)
-            {
-                var bo = BsonSerializer.Deserialize<RuleBo>(doc);
-                return bo;
-            }
-            return null;
+            IMongoCollection<RuleBo> collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                   .GetCollection<RuleBo>(_config.RuleSetting.Collection);
+            return collection.Find(Builders<RuleBo>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddRule(RuleBo bo)
         {
@@ -713,30 +692,15 @@ namespace KTAPIApplication.Services
         #region timeindex表增删改查
         public List<TimeindexBO> GetTimeindexs()
         {
-            List<TimeindexBO> bos = new List<TimeindexBO>();
-
-            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
-
-            var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
-            foreach (var doc in list)
-            {
-                var bo = BsonSerializer.Deserialize<TimeindexBO>(doc);
-                bos.Add(bo);
-            }
-            return bos;
+            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                    .GetCollection<TimeindexBO>(_config.TimeindexSetting.Collection);
+            return collection.Find(Builders<TimeindexBO>.Filter.Empty).ToList();
         }
         public TimeindexBO GetTimeindex(string id)
         {
-            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
-            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id))).ToList();
-            foreach (var doc in list)
-            {
-                var bo = BsonSerializer.Deserialize<TimeindexBO>(doc);
-                return bo;
-            }
-            return null;
+            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                   .GetCollection<TimeindexBO>(_config.TimeindexSetting.Collection);
+            return collection.Find(Builders<TimeindexBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddTimeindex(TimeindexBO bo)
         {
@@ -774,20 +738,14 @@ namespace KTAPIApplication.Services
 
         public TimeindexBO QueryTimeindex(string platform, string missileNo)
         {
-            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(_config.TimeindexSetting.Database)
+                                   .GetCollection<TimeindexBO>(_config.TimeindexSetting.Collection);
 
-            var filter = Builders<BsonDocument>.Filter;
+            var filter = Builders<TimeindexBO>.Filter;
 
-            var list = collection.Find(filter.Eq("platform", platform)
+            return collection.Find(filter.Eq("platform", platform)
                                                 & filter.Eq("missileNo", missileNo)
-                                                ).ToList();
-            foreach (var doc in list)
-            {
-                var bo = (TimeindexBO)BsonSerializer.Deserialize<TimeindexBO>(doc);
-                return bo;
-            }
-            return null;
+                                                ).FirstOrDefault();
         }
 
         #endregion
@@ -799,7 +757,7 @@ namespace KTAPIApplication.Services
             string url = _urlConfig.InfoChanged;// "http://localhost:7011/infochanged";
             try
             {
-                Task<string> s = GetAsyncJson(url);
+                Task<string> s = MyCore.Utils.HttpCli.GetAsyncJson(url);
                 s.Wait();
                 Console.WriteLine("HFJ的infochanged接口被调用了");
 
@@ -809,15 +767,6 @@ namespace KTAPIApplication.Services
                 Console.WriteLine("HFJ的infochanged接口出错了");
             }
         }
-        private static async Task<string> GetAsyncJson(string url)
-        {
-            HttpClient client = new HttpClient();
-            //HttpContent content = new StringContent();
-            //content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-            HttpResponseMessage response = await client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-            string responseBody = await response.Content.ReadAsStringAsync();
-            return responseBody;
-        }
+       
     }
 }

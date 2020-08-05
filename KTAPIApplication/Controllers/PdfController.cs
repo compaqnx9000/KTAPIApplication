@@ -6,9 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+//Install-Package Haukcode.DinkToPdf -Version 1.1.2
+
 namespace KTAPIApplication.Controllers
 {
-    [EnableCors("AllowSameDomain")]
     [ApiController]
     public class PdfController : ControllerBase
     {
@@ -31,11 +32,10 @@ namespace KTAPIApplication.Controllers
             //var htmlContent = TemplateGenerator.GetPDFHTMLString(warBase, brigade);
 
             //生成PDF
-            //var pdfBytes = _PDFService.CreatePDF(warBase, brigade);
+            var pdfBytes = _PDFService.CreatePDF(warBase, brigade);
 
-            //return File(pdfBytes, "application/pdf");
+            return File(pdfBytes, "application/pdf");
 
-            return null;
         }
     }
 }

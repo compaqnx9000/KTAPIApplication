@@ -24,7 +24,8 @@ namespace KTAPIApplication
         public static IWebHostBuilder CreateWebHostBuilder(string[] args)
         {
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            var isDevelopment = environment == EnvironmentName.Development;
+            //var isDevelopment = environment == EnvironmentName.Development;
+            var isDevelopment = environment == Microsoft.Extensions.Hosting.Environments.Development;
 
             if (isDevelopment)
             {

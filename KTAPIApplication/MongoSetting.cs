@@ -27,6 +27,8 @@ namespace SystemAPIApplication
         public DBSetting OverlaySetting { get; set; }
         public DBSetting RuleSetting { get; set; }
         public DBSetting TimeindexSetting { get; set; }
+        public DBSetting FactorSetting { get; set; }
+        public DBSetting DamageLevelSetting { get; set; }
     }
 
     public class MongoOtherSetting

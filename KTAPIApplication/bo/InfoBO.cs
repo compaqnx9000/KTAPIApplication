@@ -16,6 +16,7 @@ namespace KTAPIApplication.bo
         }
 
         public ObjectId _id { get; set; }
+        public string name { get; set; }
         public string brigade { get; set; }
         public string warBase { get; set; }
         public double shock_wave_01 { get; set; }
@@ -50,5 +51,15 @@ namespace KTAPIApplication.bo
         public double targetBindingTime { get; set; }
         public double defenseBindingTime { get; set; }
         public double fireRange { get; set; }
+        [JsonIgnore]
+        public double memo_double_01 { get; set; }
+        [JsonIgnore]
+        public double memo_double_02 { get; set; }
+        [JsonIgnore]
+        public string memo_string_01 { get; set; }
+        [JsonIgnore]
+        public string memo_string_02 { get; set; }
+        public Dictionary<string, List<string>> tags { get; set; }
+
     }
 }

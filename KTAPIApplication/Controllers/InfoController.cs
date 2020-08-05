@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace KTAPIApplication.Controllers
 {
-    [EnableCors("AllowSameDomain")]
     [ApiController]
     public class InfoController : ControllerBase
     {
@@ -61,7 +60,6 @@ namespace KTAPIApplication.Controllers
         {
             var result = _mongoService.AddInfo(bo);
 
-
             return new JsonResult(new
             {
                 return_status = 0,
@@ -105,6 +103,98 @@ namespace KTAPIApplication.Controllers
                 return_msg = "",
                 return_data = _mongoService.Taggroup()
             });
+        }
+
+        [HttpGet("fields")]
+        public ActionResult Fields()
+        {
+            Dictionary<string, string> flds = new Dictionary<string, string>();
+
+            flds.Add("name", "string");
+            flds.Add("brigade", "string");
+            flds.Add("warBase", "string");
+            flds.Add("shock_wave_01", "double");
+            flds.Add("shock_wave_02", "double");
+            flds.Add("shock_wave_03", "double");
+            flds.Add("nuclear_radiation_01", "double");
+            flds.Add("nuclear_radiation_02", "double");
+            flds.Add("nuclear_radiation_03", "double");
+            flds.Add("thermal_radiation_01", "double");
+            flds.Add("thermal_radiation_02", "double");
+            flds.Add("thermal_radiation_03", "double");
+            flds.Add("nuclear_pulse_01", "double");
+            flds.Add("nuclear_pulse_02", "double");
+            flds.Add("nuclear_pulse_03", "double");
+            flds.Add("fallout_01", "double");
+            flds.Add("fallout_02", "double");
+            flds.Add("fallout_03", "double");
+            flds.Add("lon", "double");
+            flds.Add("lat", "double");
+            flds.Add("alt", "double");
+            flds.Add("launchUnit", "string");
+            flds.Add("platform", "string");
+            flds.Add("warZone", "string");
+            flds.Add("combatZone", "string");
+            flds.Add("platoon", "string");
+            flds.Add("missileNo", "string");
+            flds.Add("missileNum", "double");
+            flds.Add("prepareTime", "double");
+            //flds.Add("targetBindingTime", "double");
+            //flds.Add("defenseBindingTime", "double");
+            flds.Add("fireRange", "double");
+
+            return new JsonResult(new
+            {
+                return_status = 0,
+                return_msg = "",
+                return_data = flds.ToList()
+            });;
+        }
+
+        [HttpGet("fieldsExclude")]
+        public ActionResult FieldsExclude()
+        {
+            Dictionary<string, string> flds = new Dictionary<string, string>();
+
+            flds.Add("name", "string");
+            flds.Add("brigade", "string");
+            flds.Add("warBase", "string");
+            flds.Add("shock_wave_01", "double");
+            flds.Add("shock_wave_02", "double");
+            flds.Add("shock_wave_03", "double");
+            flds.Add("nuclear_radiation_01", "double");
+            flds.Add("nuclear_radiation_02", "double");
+            flds.Add("nuclear_radiation_03", "double");
+            flds.Add("thermal_radiation_01", "double");
+            flds.Add("thermal_radiation_02", "double");
+            flds.Add("thermal_radiation_03", "double");
+            flds.Add("nuclear_pulse_01", "double");
+            flds.Add("nuclear_pulse_02", "double");
+            flds.Add("nuclear_pulse_03", "double");
+            flds.Add("fallout_01", "double");
+            flds.Add("fallout_02", "double");
+            flds.Add("fallout_03", "double");
+            flds.Add("lon", "double");
+            flds.Add("lat", "double");
+            flds.Add("alt", "double");
+            flds.Add("launchUnit", "string");
+            flds.Add("platform", "string");
+            flds.Add("warZone", "string");
+            flds.Add("combatZone", "string");
+            flds.Add("platoon", "string");
+            //flds.Add("missileNo", "string");
+            //flds.Add("missileNum", "double");
+            //flds.Add("prepareTime", "double");
+            //flds.Add("targetBindingTime", "double");
+            //flds.Add("defenseBindingTime", "double");
+            //flds.Add("fireRange", "double");
+
+            return new JsonResult(new
+            {
+                return_status = 0,
+                return_msg = "",
+                return_data = flds.ToList()
+            }); ;
         }
     }
 }

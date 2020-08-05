@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 namespace KTAPIApplication.Controllers
 {
-    [EnableCors("AllowSameDomain")]
     [ApiController]
     public class ConfigController : ControllerBase
     {
@@ -31,6 +30,19 @@ namespace KTAPIApplication.Controllers
                 return_status = 0,
                 return_msg = "",
                 return_data = result
+            });
+        }
+
+        [HttpGet("configsasync")]
+        public async Task<IActionResult> GetAsync()
+        {
+            //return new Json(await _mongoService.GetConfigsAsync());
+
+            return new JsonResult(new
+            {
+                return_status = 0,
+                return_msg = "",
+                return_data = await _mongoService.GetConfigsAsync()
             });
         }
 

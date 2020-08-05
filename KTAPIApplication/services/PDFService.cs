@@ -1,4 +1,6 @@
-﻿using KTAPIApplication.services;
+﻿using DinkToPdf;
+using DinkToPdf.Contracts;
+using KTAPIApplication.bo;
 using KTAPIApplication.vo;
 using MongoDB.Bson;
 using System;
@@ -10,24 +12,30 @@ namespace KTAPIApplication.Services
 {
     public class PDFService : IPDFService
     {
-        //private readonly IConverter _converter;
+        private readonly IConverter _converter;
         private readonly IMongoService _mongoService;
         private readonly IDamageAnalysisService _analysisService;
 
 
-        //public PDFService(IConverter converter, IMongoService mongoService, IDamageAnalysisService analysisService)
-        //{
-        //    _converter = converter;
-        //    _mongoService = mongoService ??
-        //        throw new ArgumentNullException(nameof(mongoService));
+        public PDFService(IConverter converter, IMongoService mongoService, IDamageAnalysisService analysisService)
+        {
+            _converter = converter;
+            _mongoService = mongoService ??
+                throw new ArgumentNullException(nameof(mongoService));
 
-        //    _analysisService = analysisService ??
-        //        throw new ArgumentNullException(nameof(analysisService));
-        //}
+            _analysisService = analysisService ??
+                throw new ArgumentNullException(nameof(analysisService));
+        }
 
         private string MakeHtml(string warBase, string brigade)
         {
-            List<BsonDocument> mocks = _mongoService.QueryMockAll();
+            FactorBO factorBO = _mongoService.GetFactors().FirstOrDefault();
+            if (factorBO == null) return "Factor数据表缺失";
+            
+            List<DamageLevelBO> damageLevelBOs = _mongoService.GetDamageLevels();
+            if (damageLevelBOs.Count == 0) return "DamageLevel数据表缺失";
+
+            List<MockBO> mocks = _mongoService.QueryMockAll();
             
 
             StringBuilder sb = new StringBuilder();
@@ -273,11 +281,11 @@ namespace KTAPIApplication.Services
                               </div>", DateTime.Now.ToLongDateString().ToString());
 
             // xxx旅核爆毁伤分析报告
-            sb.AppendFormat(@"<h1 class='title-file'>【{0}】旅核爆毁伤分析报告</h1>", brigade);
+            sb.AppendFormat(@"<h1 class='title-file'>{0}旅核爆毁伤分析报告</h1>", brigade);
 
             // 表1的文字描述
             sb.AppendFormat(@" <p class='paragraph'>
-                            【{0}】基地【{1}】旅，于XXXXXX,遭到袭击。遭袭核爆信息具体如下：
+                            {0}基地{1}旅，于[待确定时间],遭到袭击。遭袭核爆信息具体如下：
                          </p>",warBase,brigade);
             // 表1
             sb.Append(@"<p class='table-title'>表1 遭袭核爆信息</p>
@@ -292,29 +300,42 @@ namespace KTAPIApplication.Services
                             </tr>");
 
 
+            // 先判断哪些导弹对这个旅是有效打击
+            List<MockBO> validMockBO = new List<MockBO>(); // 记录有效的MockBO
+            List<InfoBO> infos = _mongoService.QueryInfoByBrigade(brigade);
             foreach (var mock in mocks)
             {
-                DateTime occurTime = mock.GetValue("OccurTime").ToUniversalTime();
-                occurTime = occurTime.AddHours(8);
-                double lon = mock.GetValue("Lon").AsDouble;
-                double lat = mock.GetValue("Lat").AsDouble;
-                double alt = mock.GetValue("Alt").AsDouble;
-                double yield = mock.GetValue("Yield").AsDouble;
+                foreach (var info in infos)
+                {
+                    double dis = MyCore.Utils.Translate.GetDistance(mock.Lat, mock.Lon, info.lat, info.lon);
+                    double r   = MyCore.NuclearAlgorithm.GetNuclearPulseRadius(mock.Yield, mock.Alt, info.nuclear_pulse_01);
+                    if (dis < r)
+                    {
+                        validMockBO.Add(mock);
+                        break;
+                    }
+                }
+            }
 
-                sb.Replace("XXXXXX", occurTime.ToString());
+            foreach (var mock in validMockBO)
+            {
+                DateTime occurTime = mock.OccurTime.ToUniversalTime();
+                occurTime = occurTime.AddHours(8);
+               
+                sb.Replace("[待确定时间]", occurTime.ToString());
 
                 sb.AppendFormat(@"<tr>
                      <td>{0}</td>
                      <td>{1}</td>
                      <td>{2} , {3}</td>
                      <td>{4}</td>
-                     </tr>", occurTime, yield, Math.Round(lon,2), Math.Round(lat,2), alt);
+                     </tr>", occurTime, mock.Yield, Math.Round(mock.Lon, 2), Math.Round(mock.Lat, 2), mock.Alt);
             }
             sb.Append(@"</table></div>");
 
             // 表2的文字描述
             sb.AppendFormat(@"<p class='paragraph' style='margin-top:2rem'>
-                          【{0}】基地【{1}】旅中的核力量遭到破坏，其中
+                          {0}基地{1}旅中的核力量遭到破坏，其中
                           <span>Stuntman</span>
                           核力量毁伤情况具体如下：
                         </p>", warBase,brigade,8,19,29,39);
@@ -325,9 +346,9 @@ namespace KTAPIApplication.Services
                               <td>核反击力量名称</td>
                               <td>总数</td>
                               <td>安全</td>
-                              <td>轻微受损</td>
-                              <td>中度受损</td>
-                              <td>重度受损</td>
+                              <td>轻微损伤</td>
+                              <td>中度损伤</td>
+                              <td>重度损伤</td>
                               <td>毁伤程度约</td>
                               <td>毁伤程度描述</td>
                             </tr>");
@@ -345,10 +366,16 @@ namespace KTAPIApplication.Services
                     string description = "无损伤";
                     foreach(var target in brigadeVO.children)
                     {
-                        var degree = (target.mildNumber * 0.3 + target.moderateNumber * 0.6 + target.severeNumber * 0.9) / target.total;
-                        if (degree > 0 && degree<=0.3) description = "轻度损伤";
-                        else if (degree > 0.3 && degree <= 0.7) description = "中度损伤";
-                        else if (degree >= 0.7) description = "重度损伤";
+                        var degree = (target.mildNumber * factorBO.level_01 + target.moderateNumber * factorBO.level_02 + target.severeNumber * factorBO.level_03) / target.total;
+                        //if (degree > 0 && degree<=0.3) description = "轻度损伤";
+                        //else if (degree > 0.3 && degree <= 0.7) description = "中度损伤";
+                        //else if (degree >= 0.7) description = "重度损伤";
+
+                        foreach(var row in damageLevelBOs)
+                        {
+                            if (degree > row.min && degree <= row.max) 
+                                description = row.description;
+                        }
 
                         sb.AppendFormat(@"<tr> 
                                             <td>{0}</td>
@@ -375,11 +402,11 @@ namespace KTAPIApplication.Services
                         {
                             stuntman += target.abilityName;
                             if (target.mildNumber > 0)
-                                stuntman += "有" + target.mildNumber + "个轻度受损，";
+                                stuntman += "有" + target.mildNumber + "个轻度损伤，";
                             if (target.moderateNumber > 0)
-                                stuntman += "有" + target.moderateNumber + "个中度受损，";
+                                stuntman += "有" + target.moderateNumber + "个中度损伤，";
                             if (target.severeNumber > 0)
-                                stuntman += "有" + target.severeNumber + "个重度受损，";
+                                stuntman += "有" + target.severeNumber + "个重度损伤，";
                         }
                     }
                 }
@@ -388,35 +415,44 @@ namespace KTAPIApplication.Services
             sb.Replace("Stuntman", stuntman);
             string description2 = "无损伤";
             string summary = "全旅未受到核爆炸影响。";
-            var degree2 = (mildNumber * 0.3 + moderateNumber * 0.6 + severeNumber * 0.9) / total;
-            if (degree2 > 0 && degree2 <= 0.3)
+            var degree2 = (mildNumber * factorBO.level_01 + moderateNumber * factorBO.level_02 + severeNumber * factorBO.level_03) / total;
+            //if (degree2 > 0 && degree2 <= 0.3)
+            //{
+            //    description2 = "轻度损伤";
+            //    summary = "全旅可继续组织反击任务。";
+            //}
+            //else if (degree2 > 0.3 && degree2 <= 0.7)
+            //{
+            //    description2 = "中度损伤";
+            //    summary = "全旅很快失去作战能力。";
+            //}
+            //else if (degree2 >= 0.7)
+            //{
+            //    description2 = "重度损伤";
+            //    summary = "全旅无法组织反击任务。";
+            //}
+
+            foreach (var row in damageLevelBOs)
             {
-                description2 = "轻度损伤";
-                summary = "全旅可继续组织反击任务。";
-            }
-            else if (degree2 > 0.3 && degree2 <= 0.7)
-            {
-                description2 = "中度损伤";
-                summary = "全旅很快失去作战能力。";
-            }
-            else if (degree2 >= 0.7)
-            {
-                description2 = "重度损伤";
-                summary = "全旅无法组织反击任务。";
+                if (degree2 > row.min && degree2 <= row.max)
+                {
+                    description2 = row.description;
+                    summary = row.summary;
+                }
             }
 
             sb.AppendFormat(@"<tr>
-                          <td colspan='4'>综合毁伤程度约(%)</td>
+                          <td colspan='4'>综合毁伤程度约</td>
                           <td colspan='3'>{0}%</td>
                           <td>{1}</td>
                         </tr>
                       </table>
-                    </div>",degree2*100,description2);
+                    </div>",Math.Round(degree2*100,2),description2);
 
             // 表3的文字描述
             sb.AppendFormat(@"<p class='paragraph'>
                                 经评估，全旅损失战斗力约为{0}%，{1}毁伤级别评估标准具体如下：
-                              </p>", degree2 * 100, summary);
+                              </p>", Math.Round(degree2 * 100,2), summary);
 
             // 表3
             sb.Append(@"<p class='table-title'>表3 核力量综合毁伤评估标准</p>
@@ -516,7 +552,7 @@ namespace KTAPIApplication.Services
 
             // 表5的文字描述
             sb.AppendFormat(@"<p class='paragraph' style='margin-top:2rem'>
-                            【{0}】基地【{1}】旅，核火球、冲击波、核辐射、光辐射、电磁脉冲五种毁伤区域如下：
+                            {0}基地{1}旅，核火球、冲击波、早期核辐射、光辐射、核电磁脉冲五种毁伤区域如下：
                         </p>",warBase,brigade);
             // 表5
             sb.Append(@" <p class='table-title'>表5 核爆毁伤区域</p>
@@ -527,34 +563,21 @@ namespace KTAPIApplication.Services
                                     <td>核火球</td>
                                     <td>冲击波</td>
                                     <td>光辐射</td>
-                                    <td>核辐射</td>
-                                    <td>电磁脉冲</td>
-                                    <td>核沉降</td>
+                                    <td>早期核辐射</td>
+                                    <td>核电磁脉冲</td>
                                 </tr>");
 
             //TODO: 循环添加
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            foreach (var mock in mocks)
+            foreach (var mock in validMockBO)
             {
-                DateTime occurTime = mock.GetValue("OccurTime").ToUniversalTime();
+                DateTime occurTime = mock.OccurTime.ToUniversalTime();
                 occurTime = occurTime.AddHours(8);
-                double lon = mock.GetValue("Lon").AsDouble;
-                double lat = mock.GetValue("Lat").AsDouble;
-                double alt = mock.GetValue("Alt").AsDouble;
-                double yield = mock.GetValue("Yield").AsDouble;
-
                
-                double fireball = myAnalyse.CalcfireBallRadius(yield / 1000.0, alt > 0);
-                double shockwave = myAnalyse.CalcShockWaveRadius(yield / 1000.0, alt * 3.2808399, 1);
-                double thermalRadiation = myAnalyse.GetThermalRadiationR(yield / 1000.0, alt * 3.2808399, 1.9);
-                double nuclearRadiation = myAnalyse.CalcNuclearRadiationRadius(yield / 1000.0, alt * 3.2808399, 100);
-                double nuclearPulse = myAnalyse.CalcNuclearPulseRadius(yield, alt / 1000.0, 200);
-
-                double maximumDownwindDistance = 0; double maximumWidth = 0;
-                myAnalyse.CalcRadioactiveFalloutRegion(lon,lat,alt * 3.2808399 ,yield/1000, 15, 225, MyCore.enums.DamageEnumeration.Light,
-                     ref  maximumDownwindDistance,ref  maximumWidth);
-
-
+                double fireball  = MyCore.NuclearAlgorithm.GetFireBallRadius(mock.Yield, mock.Alt);
+                double shockwave = MyCore.NuclearAlgorithm.GetShockWaveRadius(mock.Yield, mock.Alt, 1);
+                double thermalRadiation = MyCore.NuclearAlgorithm.GetThermalRadiationRadius(mock.Yield, mock.Alt, 1.9);
+                double nuclearRadiation = MyCore.NuclearAlgorithm.GetNuclearRadiationRadius(mock.Yield, mock.Alt, 100);
+                double nuclearPulse = MyCore.NuclearAlgorithm.GetNuclearPulseRadius(mock.Yield, mock.Alt, 200);
 
                 sb.AppendFormat(@"<tr>
                                  <td>{0}</td>
@@ -563,10 +586,8 @@ namespace KTAPIApplication.Services
                                  <td>{3}</td>
                                  <td>{4}</td>
                                  <td>{5}</td>
-                                 <td>{6} , {7}</td>
                                  </tr>", occurTime, Math.Round(fireball,2), Math.Round(shockwave,2), Math.Round(thermalRadiation,2),
-                                 Math.Round(nuclearRadiation,2), Math.Round(nuclearPulse,2), 
-                                 Math.Round(maximumDownwindDistance,2), Math.Round(maximumWidth,2));
+                                 Math.Round(nuclearRadiation,2), Math.Round(nuclearPulse,2));
             }
 
             sb.Append(@" </table></div>");
@@ -585,43 +606,42 @@ namespace KTAPIApplication.Services
         /// <returns></returns>
         public byte[] CreatePDF(string warBase, string brigade)
         {
-            //string htmlContent =  MakeHtml(warBase,brigade);
-            //var globalSettings = new GlobalSettings
-            //{
-            //    ColorMode = ColorMode.Color,
-            //    Orientation = Orientation.Portrait,
-            //    PaperSize = PaperKind.A4,
-            //    //Margins = new MarginSettings
-            //    //{
-            //    //    Top = 10,
-            //    //    Left = 0,
-            //    //    Right = 0,
-            //    //},
-            //    DocumentTitle = "PDF Report",
-            //};
-            //var objectSettings = new ObjectSettings
-            //{
-            //    PagesCount = true,
-            //    HtmlContent = htmlContent,
-            //    // Page = "www.baidu.com", //USE THIS PROPERTY TO GENERATE PDF CONTENT FROM AN HTML PAGE  这里是用现有的网页生成PDF
-            //    //WebSettings = { DefaultEncoding = "utf-8", UserStyleSheet = Path.Combine(Directory.GetCurrentDirectory(), "assets", "styles.css") },
-            //    WebSettings = { DefaultEncoding = "utf-8" },
-            //    //HeaderSettings = { FontName = "Arial", FontSize = 9, Right = "Page [page] of [toPage]", Line = true },
-            //    //FooterSettings = { FontName = "Arial", FontSize = 9, Line = true, Center = "Report Footer" }
-            //};
+            string htmlContent = MakeHtml(warBase, brigade);
+            var globalSettings = new GlobalSettings
+            {
+                ColorMode = ColorMode.Color,
+                Orientation = Orientation.Portrait,
+                PaperSize = PaperKind.A4,
+                //Margins = new MarginSettings
+                //{
+                //    Top = 10,
+                //    Left = 0,
+                //    Right = 0,
+                //},
+                DocumentTitle = "PDF Report",
+            };
+            var objectSettings = new ObjectSettings
+            {
+                PagesCount = true,
+                HtmlContent = htmlContent,
+                // Page = "www.baidu.com", //USE THIS PROPERTY TO GENERATE PDF CONTENT FROM AN HTML PAGE  这里是用现有的网页生成PDF
+                //WebSettings = { DefaultEncoding = "utf-8", UserStyleSheet = Path.Combine(Directory.GetCurrentDirectory(), "assets", "styles.css") },
+                WebSettings = { DefaultEncoding = "utf-8" },
+                //HeaderSettings = { FontName = "Arial", FontSize = 9, Right = "Page [page] of [toPage]", Line = true },
+                //FooterSettings = { FontName = "Arial", FontSize = 9, Line = true, Center = "Report Footer" }
+            };
 
-            //var pdf = new HtmlToPdfDocument()
-            //{
-            //    GlobalSettings = globalSettings,
-            //    Objects = { objectSettings }
-            //};
+            var pdf = new HtmlToPdfDocument()
+            {
+                GlobalSettings = globalSettings,
+                Objects = { objectSettings }
+            };
 
-            //var file = _converter.Convert(pdf);
+            var file = _converter.Convert(pdf);
 
-            ////return File(file, "application/pdf");
+            //return File(file, "application/pdf");
 
-            //return file;
-            return null;
+            return file;
 
         }
 

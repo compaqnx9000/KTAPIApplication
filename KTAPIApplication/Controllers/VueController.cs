@@ -1,21 +1,11 @@
-﻿using KTAPIApplication.bo;
-using KTAPIApplication.services;
-using KTAPIApplication.Services;
-using KTAPIApplication.vo;
+﻿using KTAPIApplication.Services;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
-using MongoDB.Bson.IO;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace KTAPIApplication.Controllers
 {
 
-    [EnableCors("AllowSameDomain")]
     [ApiController]
     public class VueController : ControllerBase
     {

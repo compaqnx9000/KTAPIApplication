@@ -1,10 +1,13 @@
-﻿using KTAPIApplication.services;
+﻿using DinkToPdf;
+using DinkToPdf.Contracts;
 using KTAPIApplication.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using SystemAPIApplication;
 
 namespace KTAPIApplication
@@ -21,42 +24,27 @@ namespace KTAPIApplication
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
-            //允许一个或多个具体来源:
-            services.AddCors(options =>
-            {
-                // Policy 名稱 CorsPolicy 是自訂的，可以自己改
-                //跨域规则的名称
-                options.AddPolicy("AllowSameDomain", policy =>
-                {
-                    // 設定允許跨域的來源，有多個的話可以用 `,` 隔開 65356
-                    policy.WithOrigins("http://127.0.0.1:4000", "http://localhost:4000")
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    //.AllowAnyOrigin()//允许所有来源的主机访问
-                    .AllowCredentials();
-                });
-            });
+            services.AddMvc(option => option.EnableEndpointRouting = false)
+                           .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
+                           .AddNewtonsoftJson(opt => opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
             services.Configure<MongoSetting>(Configuration.GetSection("MongoSetting"))
                 .Configure<MongoOtherSetting>(Configuration.GetSection("MongoOtherSetting"))
                 .Configure<ServiceUrls>(Configuration.GetSection("ServiceUrls"))
-                .AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+                .Configure<ThirdPartyServiceUrls>(Configuration.GetSection("ThirdPartyServiceUrls"))
+                .AddControllers();
 
-            //services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
-
-            
 
             services.AddSingleton<IMongoService, MongoService>();
             services.AddSingleton<IDamageAnalysisService, DamageAnalysisService>();
 
-            //services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));//DinkToPdf注入
-            //services.AddTransient<IPDFService, PDFService>();
+            services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));//DinkToPdf注入
+            services.AddTransient<IPDFService, PDFService>();
 
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -68,13 +56,15 @@ namespace KTAPIApplication
                 app.UseHsts();
             }
 
-           
 
-            app.UseHttpsRedirection();//?
+            app.UseRouting();
 
-            app.UseCors("AllowSameDomain");//必须位于UserMvc之前 
+            app.UseAuthorization();
 
-            app.UseMvc();
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
         }
     }
 }

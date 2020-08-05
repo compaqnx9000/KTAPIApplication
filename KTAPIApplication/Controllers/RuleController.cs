@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace KTAPIApplication.Controllers
 {
-    [EnableCors("AllowSameDomain")]
     [ApiController]
     public class RuleController : ControllerBase
     {

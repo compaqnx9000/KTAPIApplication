@@ -9,6 +9,7 @@ namespace KTAPIApplication.bo
     /// <summary>
     /// 8种类型对5种损伤的抵抗默认值。
     /// </summary>
+    [Serializable]
     public class ConfigBO
     {
         public ObjectId _id { get; set; }

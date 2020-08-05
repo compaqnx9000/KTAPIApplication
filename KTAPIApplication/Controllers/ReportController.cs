@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using KTAPIApplication.bo;
-using KTAPIApplication.services;
 using KTAPIApplication.Services;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -69,7 +68,6 @@ namespace KTAPIApplication.Controllers
         public List<Statistic> DamageList { get; set; }
     }
 
-    [EnableCors("AllowSameDomain")]
     [ApiController]
     public class ReportController : ControllerBase
     {
@@ -98,7 +96,7 @@ namespace KTAPIApplication.Controllers
             List<InfoBO> infos = _mongoService.QueryInfoByBrigade(brigade);
 
             // (2) 读取全部hb-hbmock表的信息
-            List<BsonDocument> mocks = _mongoService.QueryMockAll();
+            List<MockBO> mocks = _mongoService.QueryMockAll();
 
             // (3) 读取全部hb-config表的信息
             Dictionary<string, ConfigBO> configs = _mongoService.QueryConfigAll();
@@ -113,13 +111,10 @@ namespace KTAPIApplication.Controllers
             {
                 try
                 {
-                    DateTime occurTime = mock.GetValue("OccurTime").ToUniversalTime();
+                    DateTime occurTime = mock.OccurTime.ToUniversalTime();
                     occurTime = occurTime.AddHours(8);
-                    double lon = mock.GetValue("Lon").AsDouble;
-                    double lat = mock.GetValue("Lat").AsDouble;
-                    double alt = mock.GetValue("Alt").AsDouble;
-                    double yield = mock.GetValue("Yield").AsDouble;
-                    report.Missiles.Add(new Missile(MyCore.Utils.Util.GetTimeStamp(occurTime), yield, lon, lat, alt));
+                    report.Missiles.Add(
+                        new Missile(MyCore.Utils.Util.GetTimeStamp(occurTime), mock.Yield, mock.Lon, mock.Lat, mock.Alt));
                 }
                 catch (Exception)
                 {

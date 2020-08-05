@@ -1,6 +1,5 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Services;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -10,10 +9,10 @@ using System.Threading.Tasks;
 namespace KTAPIApplication.Controllers
 {
     [ApiController]
-    public class DescriptionController : ControllerBase
+    public class DamageLevelController : ControllerBase
     {
         private readonly IMongoService _mongoService;
-        public DescriptionController(IMongoService mongoService)
+        public DamageLevelController(IMongoService mongoService)
         {
             _mongoService = mongoService ??
                 throw new ArgumentNullException(nameof(mongoService));
@@ -23,10 +22,10 @@ namespace KTAPIApplication.Controllers
         /// 查询所有。
         /// </summary>
         /// <returns></returns>
-        [HttpGet("descriptions")]
-        public ActionResult GetDescriptions()
+        [HttpGet("damageLevels")]
+        public ActionResult GetDamageLevels()
         {
-            var result = _mongoService.GetDescriptions();
+            var result = _mongoService.GetDamageLevels();
             return new JsonResult(new
             {
                 return_status = 0,
@@ -39,10 +38,10 @@ namespace KTAPIApplication.Controllers
         /// </summary>
         /// <param name="id">mongo自动生成的那个_id。</param>
         /// <returns></returns>
-        [HttpGet("descriptions/{id}")]
-        public ActionResult GetDescription([FromRoute] string id)
+        [HttpGet("damageLevels/{id}")]
+        public ActionResult GetDamageLevel([FromRoute] string id)
         {
-            var result = _mongoService.GetDescription(id);
+            var result = _mongoService.GetDamageLevel(id);
 
             return new JsonResult(new
             {
@@ -56,10 +55,10 @@ namespace KTAPIApplication.Controllers
         /// </summary>
         /// <param name="bo"></param>
         /// <returns></returns>
-        [HttpPost("descriptions")]
-        public ActionResult AddDescription([FromBody] DescriptionBO bo)
+        [HttpPost("damageLevels")]
+        public ActionResult AddDamageLevel([FromBody] DamageLevelBO bo)
         {
-            var result = _mongoService.AddDescription(bo);
+            var result = _mongoService.AddDamageLevel(bo);
 
             return new JsonResult(new
             {
@@ -68,10 +67,10 @@ namespace KTAPIApplication.Controllers
                 return_data = result
             });
         }
-        [HttpPut("descriptions/{id}")]
-        public ActionResult UpdateDescription([FromRoute] string id, [FromBody] DescriptionBO bo)
+        [HttpPut("damageLevels/{id}")]
+        public ActionResult UpdateDamageLevel([FromRoute] string id, [FromBody] DamageLevelBO bo)
         {
-            bool result = _mongoService.UpdateDescription(id, bo);
+            bool result = _mongoService.UpdateDamageLevel(id, bo);
 
             return new JsonResult(new
             {
@@ -80,10 +79,10 @@ namespace KTAPIApplication.Controllers
                 return_data = ""
             });
         }
-        [HttpDelete("descriptions/{id}")]
-        public ActionResult DeleteDescription([FromRoute] string id)
+        [HttpDelete("damageLevels/{id}")]
+        public ActionResult DeleteDamageLevel([FromRoute] string id)
         {
-            bool result = _mongoService.DeleteDescription(id);
+            bool result = _mongoService.DeleteDamageLevel(id);
 
             return new JsonResult(new
             {
