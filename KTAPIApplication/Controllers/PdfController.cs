@@ -28,11 +28,9 @@ namespace KTAPIApplication.Controllers
         [HttpGet("pdf")]
         public FileResult GetPDF(string warBase, string brigade)
         {
-            //获取html模板
-            //var htmlContent = TemplateGenerator.GetPDFHTMLString(warBase, brigade);
+            string html = _PDFService.MakeHtml(warBase, brigade);
+            var pdfBytes = MyPdfLib.PDFUtil.GenPDF(html);
 
-            //生成PDF
-            var pdfBytes = _PDFService.CreatePDF(warBase, brigade);
 
             return File(pdfBytes, "application/pdf");
 

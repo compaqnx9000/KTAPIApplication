@@ -71,7 +71,7 @@ namespace KTAPIApplication.Controllers
         }
 
         [HttpPost("overlays")]
-        public ActionResult PostConfig([FromBody] OverlayBO overlay)
+        public ActionResult AddOverlay([FromBody] OverlayBO overlay)
         {
             var result = _mongoService.AddOverlay(overlay);
 

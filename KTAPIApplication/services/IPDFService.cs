@@ -10,11 +10,7 @@ namespace KTAPIApplication.Services
     /// </summary>
     public interface IPDFService
     {
-        /// <summary>
-        /// 创建PDF
-        /// </summary>
-        /// <param name="htmlContent">传入html字符串</param>
-        /// <returns></returns>
-        byte[] CreatePDF(string warBase, string brigade);
+        public string MakeHtml(string warBase, string brigade);
+
     }
 }

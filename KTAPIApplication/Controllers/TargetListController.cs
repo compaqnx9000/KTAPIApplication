@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using System;
@@ -12,18 +13,18 @@ namespace KTAPIApplication.Controllers
     [ApiController]
     public class TargetListController : ControllerBase
     {
-        private ThirdPartyServiceUrls _config;
+        public IConfiguration Configuration { get; }
 
-        public TargetListController(IOptions<ThirdPartyServiceUrls> options)
+
+        public TargetListController(IConfiguration configuration)
         {
-            _config = options.Value;
-
+            Configuration = configuration;
         }
         [HttpPost("earthconfig/tab/select")]
         public ActionResult Select([FromBody] dynamic body)
         {
             //天气接口
-            string url =  _config.TabSelect; //http://192.168.10.202/earthconfig/tab/select
+            string url = Configuration["ThirdPartyServiceUrls:TabSelect"]; //http://192.168.10.202/earthconfig/tab/select
             string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(body);
 
             try

@@ -1,5 +1,5 @@
-﻿using DinkToPdf;
-using DinkToPdf.Contracts;
+﻿//using DinkToPdf;
+//using DinkToPdf.Contracts;
 using KTAPIApplication.bo;
 using KTAPIApplication.vo;
 using MongoDB.Bson;
@@ -12,14 +12,12 @@ namespace KTAPIApplication.Services
 {
     public class PDFService : IPDFService
     {
-        private readonly IConverter _converter;
         private readonly IMongoService _mongoService;
         private readonly IDamageAnalysisService _analysisService;
 
 
-        public PDFService(IConverter converter, IMongoService mongoService, IDamageAnalysisService analysisService)
+        public PDFService(IMongoService mongoService, IDamageAnalysisService analysisService)
         {
-            _converter = converter;
             _mongoService = mongoService ??
                 throw new ArgumentNullException(nameof(mongoService));
 
@@ -27,7 +25,7 @@ namespace KTAPIApplication.Services
                 throw new ArgumentNullException(nameof(analysisService));
         }
 
-        private string MakeHtml(string warBase, string brigade)
+        public string MakeHtml(string warBase, string brigade)
         {
             FactorBO factorBO = _mongoService.GetFactors().FirstOrDefault();
             if (factorBO == null) return "Factor数据表缺失";
@@ -599,51 +597,7 @@ namespace KTAPIApplication.Services
             sb.Append(@"</html>");
             return sb.ToString();
         }
-        /// <summary>
-        /// 创建PDF
-        /// </summary>
-        /// <param name="htmlContent">传入html字符串</param>
-        /// <returns></returns>
-        public byte[] CreatePDF(string warBase, string brigade)
-        {
-            string htmlContent = MakeHtml(warBase, brigade);
-            var globalSettings = new GlobalSettings
-            {
-                ColorMode = ColorMode.Color,
-                Orientation = Orientation.Portrait,
-                PaperSize = PaperKind.A4,
-                //Margins = new MarginSettings
-                //{
-                //    Top = 10,
-                //    Left = 0,
-                //    Right = 0,
-                //},
-                DocumentTitle = "PDF Report",
-            };
-            var objectSettings = new ObjectSettings
-            {
-                PagesCount = true,
-                HtmlContent = htmlContent,
-                // Page = "www.baidu.com", //USE THIS PROPERTY TO GENERATE PDF CONTENT FROM AN HTML PAGE  这里是用现有的网页生成PDF
-                //WebSettings = { DefaultEncoding = "utf-8", UserStyleSheet = Path.Combine(Directory.GetCurrentDirectory(), "assets", "styles.css") },
-                WebSettings = { DefaultEncoding = "utf-8" },
-                //HeaderSettings = { FontName = "Arial", FontSize = 9, Right = "Page [page] of [toPage]", Line = true },
-                //FooterSettings = { FontName = "Arial", FontSize = 9, Line = true, Center = "Report Footer" }
-            };
-
-            var pdf = new HtmlToPdfDocument()
-            {
-                GlobalSettings = globalSettings,
-                Objects = { objectSettings }
-            };
-
-            var file = _converter.Convert(pdf);
-
-            //return File(file, "application/pdf");
-
-            return file;
-
-        }
+       
 
     }
 }

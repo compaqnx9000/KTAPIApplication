@@ -1,6 +1,7 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Controllers;
 using KTAPIApplication.vo;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -11,65 +12,28 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using SystemAPIApplication;
 
 namespace KTAPIApplication.Services
 {
     public class MongoService : IMongoService
     {
-        private MongoSetting _config;
+        public IConfiguration Configuration { get; }
+
         private MongoClient _client = null;
 
-        private MongoOtherSetting _otherConfig;
         private MongoClient _otherClient = null;
 
-        private ServiceUrls _urlConfig;
-
-        public MongoService(IOptions<MongoSetting> setting, IOptions<MongoOtherSetting> otherSetting, IOptions<ServiceUrls> urls)
+        public MongoService(IConfiguration configuration)
         {
+            Configuration = configuration;
             // 自己的库
-            _config = setting.Value;
-            string conn = "mongodb://" + _config.IP + ":" + _config.Port;
+            string conn = "mongodb://" + Configuration["MongoSetting:Ip"] + ":" + Configuration["MongoSetting:Port"];
             _client = new MongoClient(conn);
 
             // 别人的库
-            _otherConfig = otherSetting.Value;
-            string otherConn = "mongodb://" + _otherConfig.IP + ":" + _otherConfig.Port;
+            string otherConn = "mongodb://" + Configuration["MongoOtherSetting:Ip"] + ":" + Configuration["MongoOtherSetting:Port"];
             _otherClient = new MongoClient(otherConn);
-
-            _urlConfig = urls.Value;
         }
-
-        //{
-        //    id: 142555,
-        //    baseName: "基地01",
-        //    brigadeList: [
-        //        {
-        //            id: 478,
-        //            name: "45旅",
-        //            children: [
-        //                {
-        //                    id: 78,
-        //                    abilityName: "车",
-        //                    total: "20",
-        //                    safeNumber: "1",
-        //                    mildNumber: "12",
-        //                    moderateNumber: "6",
-        //                    severeNumber: "3"
-        //                },
-        //                {
-        //                    id: 4788,
-        //                    abilityName: "井",
-        //                    total: "20",
-        //                    safeNumber: "1",
-        //                    mildNumber: "12",
-        //                    moderateNumber: "3",
-        //                    severeNumber: "6",
-        //                }
-        //            ]
-        //        }
-        //    ]
-        //}
 
         private void Classfi(List<BsonDocument> lst, ref int level00, ref int level01, ref int level02, ref int level03)
         {
@@ -93,36 +57,38 @@ namespace KTAPIApplication.Services
                 }
             }
         }
-        public List<InfoBO> QueryInfoAll()
-        {
-            var collection = _client.GetDatabase(_config.InfoSetting.Database).
-              GetCollection<InfoBO>(_config.InfoSetting.Collection);
-            return collection.Find(Builders<InfoBO>.Filter.Empty).ToList();
-        }
+        
         public List<MockBO> QueryMockAll()
         {
-            var collection = _otherClient.GetDatabase(_otherConfig.MockSetting.Database).GetCollection<MockBO>(_otherConfig.MockSetting.Collection);
+            var collection = _otherClient.GetDatabase(Configuration["MongoOtherSetting:MockSetting:Database"])
+                .GetCollection<MockBO>(Configuration["MongoOtherSetting:MockSetting:Collection"]);
+
             return collection.Find(Builders<MockBO>.Filter.Empty).ToList();
         }
 
         public List<MockBO> QueryMock(string nuclearExplosionID)
         {
-            var collection = _otherClient.GetDatabase(_otherConfig.MockSetting.Database).GetCollection<MockBO>(_otherConfig.MockSetting.Collection);
+            var collection = _otherClient.GetDatabase(Configuration["MongoOtherSetting:MockSetting:Database"])
+                            .GetCollection<MockBO>(Configuration["MongoOtherSetting:MockSetting:Collection"]);
+
             return collection.Find(Builders<MockBO>.Filter.Eq("NuclearExplosionID", nuclearExplosionID)).ToList();
         }
 
         public List<InfoBO> QueryInfoByBrigade(string brigade)
         {
-            IMongoCollection<InfoBO> collection = _otherClient.GetDatabase(_config.InfoSetting.Database)
-                                         .GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            
+            IMongoCollection<InfoBO> collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                         .GetCollection<InfoBO>(Configuration["MongoSetting:InfoSetting:Collection"]);
+
             return collection.Find(Builders<InfoBO>.Filter.Eq("brigade", brigade)).ToList();
         }
 
         public List<BaseVO> Query()
         {
+            
             // 一个旅：通信站1个、发射场6~36个、中心库2个、待机库2个、营区（主营区1个，小营区2个）
-            var collection = _client.GetDatabase(_config.InfoSetting.Database).
-                GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"]).
+                GetCollection<BsonDocument>(Configuration["MongoSetting:InfoSetting:Collection"]);
 
             // 查询不重复基地名称
             FieldDefinition<BsonDocument, string> field = "base";  // 需要distinct字段
@@ -250,7 +216,8 @@ namespace KTAPIApplication.Services
         {
             Dictionary<string, ConfigBO> kv = new Dictionary<string, ConfigBO>();
 
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database).GetCollection<BsonDocument>(_config.ConfigSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:ConfigSetting:Database"])
+                .GetCollection<BsonDocument>(Configuration["MongoSetting:ConfigSetting:Collection"]);
 
             var list = collection.Find(Builders<BsonDocument>.Filter.Empty).ToList();
             foreach (var doc in list)
@@ -264,23 +231,23 @@ namespace KTAPIApplication.Services
         }
         public List<ConfigBO> GetConfigs()
         {
-            IMongoCollection<ConfigBO> collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<ConfigBO>(_config.ConfigSetting.Collection);
+            IMongoCollection<ConfigBO> collection = _client.GetDatabase(Configuration["MongoSetting:ConfigSetting:Database"])
+                                    .GetCollection<ConfigBO>(Configuration["MongoSetting:ConfigSetting:Collection"]);
 
             return collection.Find(Builders<ConfigBO>.Filter.Empty).ToList();
         }
 
         public ConfigBO GetConfig(string id)
         {
-            IMongoCollection<ConfigBO> collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<ConfigBO>(_config.ConfigSetting.Collection);
+            IMongoCollection<ConfigBO> collection = _client.GetDatabase(Configuration["MongoSetting:ConfigSetting:Database"])
+                                    .GetCollection<ConfigBO>(Configuration["MongoSetting:ConfigSetting:Collection"]);
             return collection.Find(Builders<ConfigBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
 
         public bool UpdateConfig(string id, ConfigBO config)
         {
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.ConfigSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:ConfigSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:ConfigSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -304,8 +271,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteConfig(string id)
         {
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.ConfigSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:ConfigSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:ConfigSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -313,20 +280,12 @@ namespace KTAPIApplication.Services
         }
         public string AddConfig(ConfigBO config)
         {
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.ConfigSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:ConfigSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:ConfigSetting:Collection"]);
 
             var document = config.ToBsonDocument();
             collection.InsertOne(document);
             return document.GetValue("_id").ToString();
-        }
-
-        public async  Task<IEnumerable<ConfigBO>> GetConfigsAsync()
-        {
-            var collection = _client.GetDatabase(_config.ConfigSetting.Database)
-                                    .GetCollection<ConfigBO>(_config.ConfigSetting.Collection);
-
-            return await collection.Find(Builders<ConfigBO>.Filter.Empty).ToListAsync();
         }
 
         #endregion
@@ -338,20 +297,20 @@ namespace KTAPIApplication.Services
         /// <returns></returns>
         public List<DescriptionBO> GetDescriptions()
         {
-            IMongoCollection<DescriptionBO> collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                    .GetCollection<DescriptionBO>(_config.DescriptionSetting.Collection);
+            IMongoCollection<DescriptionBO> collection = _client.GetDatabase(Configuration["MongoSetting:DescriptionSetting:Database"])
+                                    .GetCollection<DescriptionBO>(Configuration["MongoSetting:DescriptionSetting:Collection"]);
             return collection.Find(Builders<DescriptionBO>.Filter.Empty).ToList();
         }
         public DescriptionBO GetDescription(string id)
         {
-            IMongoCollection<DescriptionBO> collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                    .GetCollection<DescriptionBO>(_config.DescriptionSetting.Collection);
+            IMongoCollection<DescriptionBO> collection = _client.GetDatabase(Configuration["MongoSetting:DescriptionSetting:Database"])
+                                    .GetCollection<DescriptionBO>(Configuration["MongoSetting:DescriptionSetting:Collection"]);
             return collection.Find(Builders<DescriptionBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddDescription(DescriptionBO bo)
         {
-            var collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.DescriptionSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:DescriptionSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:DescriptionSetting:Collection"]);
 
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
@@ -360,8 +319,8 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateDescription(string id, DescriptionBO bo)
         {
-            var collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.DescriptionSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:DescriptionSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:DescriptionSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -374,8 +333,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteDescription(string id)
         {
-            var collection = _client.GetDatabase(_config.DescriptionSetting.Database)
-                                        .GetCollection<BsonDocument>(_config.DescriptionSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:DescriptionSetting:Database"])
+                                        .GetCollection<BsonDocument>(Configuration["MongoSetting:DescriptionSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -391,20 +350,20 @@ namespace KTAPIApplication.Services
         /// <returns></returns>
         public List<FactorBO> GetFactors()
         {
-            IMongoCollection<FactorBO> collection = _client.GetDatabase(_config.FactorSetting.Database)
-                                    .GetCollection<FactorBO>(_config.FactorSetting.Collection);
+            IMongoCollection<FactorBO> collection = _client.GetDatabase(Configuration["MongoSetting:FactorSetting:Database"])
+                                    .GetCollection<FactorBO>(Configuration["MongoSetting:FactorSetting:Collection"]);
             return collection.Find(Builders<FactorBO>.Filter.Empty).ToList();
         }
         public FactorBO GetFactor(string id)
         {
-            IMongoCollection<FactorBO> collection = _client.GetDatabase(_config.FactorSetting.Database)
-                                    .GetCollection<FactorBO>(_config.FactorSetting.Collection);
+            IMongoCollection<FactorBO> collection = _client.GetDatabase(Configuration["MongoSetting:FactorSetting:Database"])
+                                    .GetCollection<FactorBO>(Configuration["MongoSetting:FactorSetting:Collection"]);
             return collection.Find(Builders<FactorBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddFactor(FactorBO bo)
         {
-            var collection = _client.GetDatabase(_config.FactorSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.FactorSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:FactorSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:FactorSetting:Collection"]);
 
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
@@ -413,8 +372,8 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateFactor(string id, FactorBO bo)
         {
-            var collection = _client.GetDatabase(_config.FactorSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.FactorSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:FactorSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:FactorSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -426,8 +385,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteFactor(string id)
         {
-            var collection = _client.GetDatabase(_config.FactorSetting.Database)
-                                        .GetCollection<BsonDocument>(_config.FactorSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:FactorSetting:Database"])
+                                        .GetCollection<BsonDocument>(Configuration["MongoSetting:FactorSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -443,20 +402,20 @@ namespace KTAPIApplication.Services
         /// <returns></returns>
         public List<DamageLevelBO> GetDamageLevels()
         {
-            IMongoCollection<DamageLevelBO> collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
-                                    .GetCollection<DamageLevelBO>(_config.DamageLevelSetting.Collection);
+            IMongoCollection<DamageLevelBO> collection = _client.GetDatabase(Configuration["MongoSetting:DamageLevelSetting:Database"])
+                                    .GetCollection<DamageLevelBO>(Configuration["MongoSetting:DamageLevelSetting:Collection"]);
             return collection.Find(Builders<DamageLevelBO>.Filter.Empty).ToList();
         }
         public DamageLevelBO GetDamageLevel(string id)
         {
-            IMongoCollection<DamageLevelBO> collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
-                                    .GetCollection<DamageLevelBO>(_config.DamageLevelSetting.Collection);
+            IMongoCollection<DamageLevelBO> collection = _client.GetDatabase(Configuration["MongoSetting:DamageLevelSetting:Database"])
+                                    .GetCollection<DamageLevelBO>(Configuration["MongoSetting:DamageLevelSetting:Collection"]);
             return collection.Find(Builders<DamageLevelBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddDamageLevel(DamageLevelBO bo)
         {
-            var collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.DamageLevelSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:DamageLevelSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:DamageLevelSetting:Collection"]);
 
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
@@ -465,8 +424,8 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateDamageLevel(string id, DamageLevelBO bo)
         {
-            var collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.DamageLevelSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:DamageLevelSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:DamageLevelSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -480,8 +439,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteDamageLevel(string id)
         {
-            var collection = _client.GetDatabase(_config.DamageLevelSetting.Database)
-                                        .GetCollection<BsonDocument>(_config.DamageLevelSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:DamageLevelSetting:Database"])
+                                        .GetCollection<BsonDocument>(Configuration["MongoSetting:DamageLevelSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -493,22 +452,48 @@ namespace KTAPIApplication.Services
         #region Info表增删改查
         public List<InfoBO> GetInfos()
         {
-            IMongoCollection<InfoBO> collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            IMongoCollection<InfoBO> collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                    .GetCollection<InfoBO>(Configuration["MongoSetting:InfoSetting:Collection"]);
             return collection.Find(Builders<InfoBO>.Filter.Empty).ToList();
         }
         public InfoBO GetInfo(string id)
         {
-            IMongoCollection<InfoBO> collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<InfoBO>(_config.InfoSetting.Collection);
+            IMongoCollection<InfoBO> collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                    .GetCollection<InfoBO>(Configuration["MongoSetting:InfoSetting:Collection"]);
             return collection.Find(Builders<InfoBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddInfo(InfoBO bo)
         {
-            var collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:InfoSetting:Collection"]);
+
+
+            //2020-10-10 添加之前要先查一下基地+旅的记录，并且取出最后一条记录的launchUnit，做+1操作
+            var filter = Builders<BsonDocument>.Filter;
+            ProjectionDefinitionBuilder<BsonDocument> builderProjection = Builders<BsonDocument>.Projection;
+            ProjectionDefinition<BsonDocument> projection = builderProjection.Include("launchUnit").Exclude("_id");
+
+            var docs_02 = collection.Find(filter.Eq("warBase", bo.warBase)
+                                               & filter.Eq("brigade", bo.brigade))
+                                                .Project(projection).ToList();
+            int preparedLaunchUnit = -1;
+            if (docs_02.Count > 0)
+            {
+                // 如果有值，就找最大的值，然后加一
+                foreach(var launchUnit in docs_02)
+                {
+                    if (launchUnit.GetValue(0).ToInt32() > preparedLaunchUnit)
+                        preparedLaunchUnit = launchUnit.GetValue(0).ToInt32();
+                }
+                bo.launchUnit = (preparedLaunchUnit + 1).ToString();
+            }
+            else
+            {
+                bo.launchUnit = bo.warBase + bo.brigade + "001";
+            }
 
             var document = bo.ToBsonDocument();
+
             collection.InsertOne(document);
 
             InfoChanged();
@@ -517,16 +502,17 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateInfo(string id, InfoBO bo)
         {
-            var collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:InfoSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var update = Builders<BsonDocument>.Update.Set("brigade", bo.brigade)
+                                                    .Set("name", bo.name)
                                                     .Set("lon", bo.lon)
                                                     .Set("lat", bo.lat)
                                                     .Set("alt", bo.alt)
-                                                    .Set("launchUnit", bo.launchUnit)
+                                                    //.Set("launchUnit", bo.launchUnit)
                                                     .Set("platform", bo.platform)
                                                     .Set("warZone", bo.warZone)
                                                     .Set("combatZone", bo.combatZone)
@@ -545,14 +531,25 @@ namespace KTAPIApplication.Services
                                                     .Set("nuclear_pulse_01", bo.nuclear_pulse_01)
                                                     .Set("nuclear_pulse_02", bo.nuclear_pulse_02)
                                                     .Set("nuclear_pulse_03", bo.nuclear_pulse_03)
-                                                    .Set("fallout_01", bo.fallout_01)
-                                                    .Set("fallout_02", bo.fallout_02)
-                                                    .Set("fallout_03", bo.fallout_03)
+                                                    //.Set("fallout_01", bo.fallout_01)
+                                                    //.Set("fallout_02", bo.fallout_02)
+                                                    //.Set("fallout_03", bo.fallout_03)
                                                     .Set("warBase", bo.warBase)
-                                                    .Set("prepareTime" ,bo.prepareTime)
-                                                    .Set("targetBindingTime" ,bo.targetBindingTime)
-                                                    .Set("defenseBindingTime" ,bo.defenseBindingTime)
-                                                    .Set("fireRange",bo.fireRange);
+                                                    .Set("prepareTime", bo.prepareTime)
+                                                    .Set("targetBindingTime", bo.targetBindingTime)
+                                                    .Set("defenseBindingTime", bo.defenseBindingTime)
+                                                    .Set("tags", bo.tags)
+                                                    .Set("fireRange", bo.fireRange)
+                                                    .Set("useState" ,bo.useState)
+                                                    .Set("structureLength" , bo.structureLength)
+                                                    .Set("structureWidth" , bo.structureWidth)
+                                                    .Set("structureHeight" , bo.structureHeight)
+                                                    .Set("headCount", bo.headCount)
+                                                    .Set("bodyCount", bo.bodyCount)
+                                                    .Set("platCount", bo.platCount)
+                                                    .Set("notes" , bo.notes)
+                                                    ;
+                                            
 
 
 
@@ -565,8 +562,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteInfo(string id)
         {
-            var collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                         .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                         .GetCollection<BsonDocument>(Configuration["MongoSetting:InfoSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -578,8 +575,8 @@ namespace KTAPIApplication.Services
         public List<TaggroupVO> Taggroup()
         {
             List<TaggroupVO> taggroups = new List<TaggroupVO>();
-            var collection = _client.GetDatabase(_config.InfoSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.InfoSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:InfoSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:InfoSetting:Collection"]);
 
             var bases = collection.Distinct<string>("warBase", Builders<BsonDocument>.Filter.Empty).ToList().ToArray();
             var missileNos = collection.Distinct<string>("missileNo", Builders<BsonDocument>.Filter.Empty).ToList().ToArray();
@@ -597,20 +594,20 @@ namespace KTAPIApplication.Services
         #region overlay表增删改查
         public List<OverlayBO> GetOverlays()
         {
-            IMongoCollection<OverlayBO> collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                    .GetCollection<OverlayBO>(_config.OverlaySetting.Collection);
+            IMongoCollection<OverlayBO> collection = _client.GetDatabase(Configuration["MongoSetting:OverlaySetting:Database"])
+                                    .GetCollection<OverlayBO>(Configuration["MongoSetting:OverlaySetting:Collection"]);
             return collection.Find(Builders<OverlayBO>.Filter.Empty).ToList();
         }
         public OverlayBO GetOverlay(string id)
         {
-            IMongoCollection<OverlayBO> collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                   .GetCollection<OverlayBO>(_config.OverlaySetting.Collection);
+            IMongoCollection<OverlayBO> collection = _client.GetDatabase(Configuration["MongoSetting:OverlaySetting:Database"])
+                                   .GetCollection<OverlayBO>(Configuration["MongoSetting:OverlaySetting:Collection"]);
             return collection.Find(Builders<OverlayBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddOverlay(OverlayBO bo)
         {
-            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                    .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:OverlaySetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:OverlaySetting:Collection"]);
 
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
@@ -618,8 +615,8 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateOverlay(string id, OverlayBO bo)
         {
-            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                   .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:OverlaySetting:Database"])
+                                   .GetCollection<BsonDocument>(Configuration["MongoSetting:OverlaySetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -632,8 +629,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteOverlay(string id)
         {
-            var collection = _client.GetDatabase(_config.OverlaySetting.Database)
-                                   .GetCollection<BsonDocument>(_config.OverlaySetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:OverlaySetting:Database"])
+                                   .GetCollection<BsonDocument>(Configuration["MongoSetting:OverlaySetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -644,20 +641,20 @@ namespace KTAPIApplication.Services
         #region Rule表增删改查
         public List<RuleBo> GetRules()
         {
-            IMongoCollection<RuleBo> collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                    .GetCollection<RuleBo>(_config.RuleSetting.Collection);
+            IMongoCollection<RuleBo> collection = _client.GetDatabase(Configuration["MongoSetting:RuleSetting:Database"])
+                                    .GetCollection<RuleBo>(Configuration["MongoSetting:RuleSetting:Collection"]);
             return collection.Find(Builders<RuleBo>.Filter.Empty).ToList();
         }
         public RuleBo GetRule(string id)
         {
-            IMongoCollection<RuleBo> collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                   .GetCollection<RuleBo>(_config.RuleSetting.Collection);
+            IMongoCollection<RuleBo> collection = _client.GetDatabase(Configuration["MongoSetting:RuleSetting:Database"])
+                                   .GetCollection<RuleBo>(Configuration["MongoSetting:RuleSetting:Collection"]);
             return collection.Find(Builders<RuleBo>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddRule(RuleBo bo)
         {
-            var collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                    .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:RuleSetting:Database"])
+                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:RuleSetting:Collection"]);
 
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
@@ -665,8 +662,8 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateRule(string id, RuleBo bo)
         {
-            var collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                  .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:RuleSetting:Database"])
+                                  .GetCollection<BsonDocument>(Configuration["MongoSetting:RuleSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -680,8 +677,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteRule(string id)
         {
-            var collection = _client.GetDatabase(_config.RuleSetting.Database)
-                                   .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:RuleSetting:Database"])
+                                   .GetCollection<BsonDocument>(Configuration["MongoSetting:RuleSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -692,20 +689,20 @@ namespace KTAPIApplication.Services
         #region timeindex表增删改查
         public List<TimeindexBO> GetTimeindexs()
         {
-            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                    .GetCollection<TimeindexBO>(_config.TimeindexSetting.Collection);
+            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(Configuration["MongoSetting:TimeindexSetting:Database"])
+                                    .GetCollection<TimeindexBO>(Configuration["MongoSetting:TimeindexSetting:Collection"]);
             return collection.Find(Builders<TimeindexBO>.Filter.Empty).ToList();
         }
         public TimeindexBO GetTimeindex(string id)
         {
-            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                   .GetCollection<TimeindexBO>(_config.TimeindexSetting.Collection);
+            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(Configuration["MongoSetting:TimeindexSetting:Database"])
+                                   .GetCollection<TimeindexBO>(Configuration["MongoSetting:TimeindexSetting:Collection"]);
             return collection.Find(Builders<TimeindexBO>.Filter.Eq("_id", new ObjectId(id))).FirstOrDefault();
         }
         public string AddTimeindex(TimeindexBO bo)
         {
-            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:TimeindexSetting:Database"])
+                                   .GetCollection<BsonDocument>(Configuration["MongoSetting:TimeindexSetting:Collection"]);
 
             var document = bo.ToBsonDocument();
             collection.InsertOne(document);
@@ -713,8 +710,8 @@ namespace KTAPIApplication.Services
         }
         public bool UpdateTimeindex(string id, TimeindexBO bo)
         {
-            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                 .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:TimeindexSetting:Database"])
+                                 .GetCollection<BsonDocument>(Configuration["MongoSetting:TimeindexSetting:Collection"]);
 
             var filter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
@@ -728,8 +725,8 @@ namespace KTAPIApplication.Services
         }
         public bool DeleteTimeindex(string id)
         {
-            var collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                   .GetCollection<BsonDocument>(_config.TimeindexSetting.Collection);
+            var collection = _client.GetDatabase(Configuration["MongoSetting:TimeindexSetting:Database"])
+                                   .GetCollection<BsonDocument>(Configuration["MongoSetting:TimeindexSetting:Collection"]);
             var deleteFilter = Builders<BsonDocument>.Filter.Eq("_id", new ObjectId(id));
 
             var result = collection.DeleteOne(deleteFilter);
@@ -738,8 +735,8 @@ namespace KTAPIApplication.Services
 
         public TimeindexBO QueryTimeindex(string platform, string missileNo)
         {
-            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(_config.TimeindexSetting.Database)
-                                   .GetCollection<TimeindexBO>(_config.TimeindexSetting.Collection);
+            IMongoCollection<TimeindexBO> collection = _client.GetDatabase(Configuration["MongoSetting:TimeindexSetting:Database"])
+                                   .GetCollection<TimeindexBO>(Configuration["MongoSetting:TimeindexSetting:Collection"]);
 
             var filter = Builders<TimeindexBO>.Filter;
 
@@ -754,13 +751,12 @@ namespace KTAPIApplication.Services
         private void InfoChanged()
         {
             // 修改了调用HFJ的接口通知
-            string url = _urlConfig.InfoChanged;// "http://localhost:7011/infochanged";
+            string url = Configuration["ServiceUrls:InfoChanged"];// "http://localhost:7011/infochanged";
             try
             {
                 Task<string> s = MyCore.Utils.HttpCli.GetAsyncJson(url);
                 s.Wait();
                 Console.WriteLine("HFJ的infochanged接口被调用了");
-
             }
             catch (Exception e)
             {

@@ -6,9 +6,12 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTAPIApplication", "KTAPIApplication\KTAPIApplication.csproj", "{96A3E9A0-9046-4076-9B29-D21E4AA82C44}"
 	ProjectSection(ProjectDependencies) = postProject
 		{4AC3F07F-82F7-4036-B7F8-4DBB7F1635FC} = {4AC3F07F-82F7-4036-B7F8-4DBB7F1635FC}
+		{913955C1-FEF6-41BE-A6A1-1CA805D4F4F2} = {913955C1-FEF6-41BE-A6A1-1CA805D4F4F2}
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyCore", "..\MyCore\MyCore\MyCore.csproj", "{4AC3F07F-82F7-4036-B7F8-4DBB7F1635FC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MyPdfLib", "..\MyPdfLib\MyPdfLib\MyPdfLib.csproj", "{913955C1-FEF6-41BE-A6A1-1CA805D4F4F2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +27,10 @@ Global
 		{4AC3F07F-82F7-4036-B7F8-4DBB7F1635FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4AC3F07F-82F7-4036-B7F8-4DBB7F1635FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4AC3F07F-82F7-4036-B7F8-4DBB7F1635FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{913955C1-FEF6-41BE-A6A1-1CA805D4F4F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{913955C1-FEF6-41BE-A6A1-1CA805D4F4F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{913955C1-FEF6-41BE-A6A1-1CA805D4F4F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{913955C1-FEF6-41BE-A6A1-1CA805D4F4F2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

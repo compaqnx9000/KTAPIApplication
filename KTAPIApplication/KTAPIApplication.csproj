@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Haukcode.DinkToPdf" Version="1.1.2" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.6" />
     <PackageReference Include="MongoDB.Driver" Version="2.10.2" />
     <PackageReference Include="NetTopologySuite" Version="2.0.0" />
@@ -15,6 +14,7 @@
   </ItemGroup>
   <ItemGroup>
 	<ProjectReference Include="..\..\MyCore\MyCore\MyCore.csproj" />
+	<ProjectReference Include="..\..\MyPdfLib\MyPdfLib\MyPdfLib.csproj" />
   </ItemGroup>
   <ProjectExtensions><VisualStudio><UserProperties appsettings_1development_1json__JsonSchema="https://docs.renovatebot.com/renovate-schema.json" /></VisualStudio></ProjectExtensions>
 </Project>

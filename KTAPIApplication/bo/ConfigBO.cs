@@ -26,8 +26,5 @@ namespace KTAPIApplication.bo
         public double nuclear_pulse_01 { get; set; }
         public double nuclear_pulse_02 { get; set; }
         public double nuclear_pulse_03 { get; set; }
-        public double fallout_01 { get; set; }
-        public double fallout_02 { get; set; }
-        public double fallout_03 { get; set; }
     }
 }

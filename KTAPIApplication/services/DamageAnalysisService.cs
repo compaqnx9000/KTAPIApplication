@@ -1,22 +1,29 @@
 ﻿using KTAPIApplication.bo;
 using KTAPIApplication.Services;
 using KTAPIApplication.vo;
+using Microsoft.Extensions.Configuration;
 using MongoDB.Bson;
+using MyCore.enums;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace KTAPIApplication.Services
 {
     public class DamageAnalysisService : IDamageAnalysisService
     {
+        public IConfiguration Configuration { get; }
+
         private readonly IMongoService _mongoService;
 
         MyCore.MyAnalyse _analyse = new MyCore.MyAnalyse();
 
-        public DamageAnalysisService(IMongoService mongoService)
+        public DamageAnalysisService(IConfiguration configuration,IMongoService mongoService)
         {
+            Configuration = configuration;
+
             _mongoService = mongoService ??
                throw new ArgumentNullException(nameof(mongoService));
         }
@@ -46,7 +53,7 @@ namespace KTAPIApplication.Services
                 string id = jo["ids"].First.ToString();
 
                 // (1) 读取全部hb-info表的信息
-                List<InfoBO> infos = _mongoService.QueryInfoAll();
+                List<InfoBO> infos = _mongoService.GetInfos();
 
                 // (2) 读取全部hb-hbmock表的信息
                 List<MockBO> mocks = _mongoService.QueryMock(id);
@@ -110,7 +117,7 @@ namespace KTAPIApplication.Services
         public List<BaseVO> Query()
         {
             // (1) 读取全部hb-info表的信息
-            List<InfoBO> infos = _mongoService.QueryInfoAll();
+            List<InfoBO> infos = _mongoService.GetInfos();
 
             // (2) 读取全部hb-hbmock表的信息
             List<MockBO> mocks = _mongoService.QueryMockAll();
@@ -162,6 +169,21 @@ namespace KTAPIApplication.Services
                 }
                 baseVOs.Add(new BaseVO("id", bs, brigadeVOs));
             }
+
+
+            // 往7078发
+            try
+            {
+                string json1 = Newtonsoft.Json.JsonConvert.SerializeObject(baseVOs);
+                //Configuration["PushUrls:query"]"http://localhost:7078/receivce/query"
+                Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(Configuration["PushUrls:query"], json1);
+                s.Wait();
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("检查7078配置");
+            }
+
             return baseVOs;
         }
 
@@ -175,67 +197,105 @@ namespace KTAPIApplication.Services
                 {
                     //求爆点和8种Target的距离
                     double dis = MyCore.Utils.Translate.GetDistance(mock.Lat, mock.Lon, info.lat, info.lon);
+                    MyCore.enums.DamageEnumeration result1 = MyCore.enums.DamageEnumeration.Safe;
+                    MyCore.enums.DamageEnumeration result2 = MyCore.enums.DamageEnumeration.Safe;
+                    MyCore.enums.DamageEnumeration result3 = MyCore.enums.DamageEnumeration.Safe;
+                    MyCore.enums.DamageEnumeration result4 = MyCore.enums.DamageEnumeration.Safe;
+                    MyCore.enums.DamageEnumeration result = MyCore.enums.DamageEnumeration.Safe;
 
-                    if (info.platform.Equals("营区"))
-                    {
-                        // 对《营区》有影响的是 [冲击波 & 光辐射] ，取2种损伤最大的
-                        var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01,info.shock_wave_02,info.shock_wave_03);
-                        var result2 = MyCore.NuclearAlgorithm.ThermalRadiation(dis, mock.Yield, mock.Alt, info.thermal_radiation_01,info.thermal_radiation_02,info.thermal_radiation_03);
-                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
-                    else if (info.platform.Equals("中心库"))
-                    {
-                        // 对《中心库》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
-                        var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
-                        var result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
-                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
-                    else if (info.platform.Equals("待机库"))
-                    {
-                        // 对《待机库》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
-                        var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
-                        var result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
-                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
-                    else if (info.platform.Equals("发射井"))
-                    {
-                        // 对《井》有影响的是[冲击波]
-                        var result = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
-                    else if (info.platform.Equals("发射场"))
-                    {
-                        // 对《发射场》有影响的是[ 冲击波 & 核辐射 ] ，取2种损伤最大的
-                        var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
-                        var result2 = MyCore.NuclearAlgorithm.NuclearRadiation(dis, mock.Yield, mock.Alt, info.nuclear_radiation_01,info.nuclear_radiation_02,info.nuclear_radiation_03);
-                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
-                    else if (info.platform.Equals("通信站"))
-                    {
-                        // 对《通信站》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
-                        var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
-                        var result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis , mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
-                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
-                    else if (info.platform.Equals("发射车"))
-                    {
-                        // 对《车》有影响的是[ 冲击波 & 光辐射 & 核辐射 & 核电磁脉冲 ] ，取4种损伤最大的
-                        var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
-                        var result2 = MyCore.NuclearAlgorithm.ThermalRadiation(dis, mock.Yield, mock.Alt, info.thermal_radiation_01, info.thermal_radiation_02, info.thermal_radiation_03);
-                        var result3 = MyCore.NuclearAlgorithm.NuclearRadiation(dis, mock.Yield, mock.Alt, info.nuclear_radiation_01, info.nuclear_radiation_02, info.nuclear_radiation_03);
-                        var result4 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+                    // 1.受到冲击波影响？
+                    if (info.shock_wave_01 > 0 && info.shock_wave_02 > 0 && info.shock_wave_03 > 0)
+                        result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
 
-                        var result12 = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
-                        var result34 = (MyCore.enums.DamageEnumeration)Math.Max(result3.GetHashCode(), result4.GetHashCode());
+                    // 2.受到热辐射影响？
+                    if (info.thermal_radiation_01 > 0 && info.thermal_radiation_02 > 0 && info.thermal_radiation_03 > 0)
+                        result2 = MyCore.NuclearAlgorithm.ThermalRadiation(dis, mock.Yield, mock.Alt, info.thermal_radiation_01, info.thermal_radiation_02, info.thermal_radiation_03);
 
-                        var result = (MyCore.enums.DamageEnumeration)Math.Max(result12.GetHashCode(), result34.GetHashCode());
-                        info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
-                    }
+                    // 3.受到核辐射影响？
+                    if (info.nuclear_radiation_01 > 0 && info.nuclear_radiation_02 > 0 && info.nuclear_radiation_03 > 0)
+                        result3 = MyCore.NuclearAlgorithm.NuclearRadiation(dis, mock.Yield, mock.Alt, info.nuclear_radiation_01, info.nuclear_radiation_02, info.nuclear_radiation_03);
+
+                    // 4.受到核电磁脉冲影响？
+                    if (info.nuclear_pulse_01 > 0 && info.nuclear_pulse_02 > 0 && info.nuclear_pulse_03 > 0)
+                        result4 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+                   
+                    var result12 = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    var result34 = (MyCore.enums.DamageEnumeration)Math.Max(result3.GetHashCode(), result4.GetHashCode());
+                    result = (MyCore.enums.DamageEnumeration)Math.Max(result12.GetHashCode(), result34.GetHashCode());
+
+                    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+
+                    //if (info.platform.Equals("营区"))
+                    //{
+                    //    // 对《营区》有影响的是 [冲击波 & 光辐射] ，取2种损伤最大的
+                    //    var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01,info.shock_wave_02,info.shock_wave_03);
+                    //    var result2 = MyCore.NuclearAlgorithm.ThermalRadiation(dis, mock.Yield, mock.Alt, info.thermal_radiation_01,info.thermal_radiation_02,info.thermal_radiation_03);
+                    //    var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
+                    //else if (info.platform.Equals("中心库"))
+                    //{
+                    //    // 对《中心库》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
+                    //    var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
+                    //    var result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+                    //    var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
+                    //else if (info.platform.Equals("待机库"))
+                    //{
+                    //    // 对《待机库》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
+                    //    var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
+                    //    //var result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+
+                    //    DamageEnumeration result2 = DamageEnumeration.Safe;
+                    //    if (info.nuclear_pulse_01 != 0 && info.nuclear_pulse_02 != 0 && info.nuclear_pulse_03 != 0)
+                    //        result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+
+
+                    //    var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
+                    //else if (info.platform.Equals("发射井"))
+                    //{
+                    //    // 对《井》有影响的是[冲击波]
+                    //    var result = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
+                    //else if (info.platform.Equals("发射场"))
+                    //{
+                    //    // 对《发射场》有影响的是[ 冲击波 & 核辐射 ] ，取2种损伤最大的
+                    //    var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
+                    //    var result2 = MyCore.NuclearAlgorithm.NuclearRadiation(dis, mock.Yield, mock.Alt, info.nuclear_radiation_01,info.nuclear_radiation_02,info.nuclear_radiation_03);
+                    //    var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
+                    //else if (info.platform.Equals("通信站"))
+                    //{
+                    //    // 对《通信站》有影响的是[ 冲击波 & 核电磁脉冲 ] ，取2种损伤最大的
+                    //    var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
+                    //    DamageEnumeration result2 = DamageEnumeration.Safe;
+                    //    if (info.nuclear_pulse_01 != 0 && info.nuclear_pulse_02 != 0 && info.nuclear_pulse_03 != 0)
+                    //        result2 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+                    //    var result = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
+                    //else if (info.platform.Equals("发射车"))
+                    //{
+                    //    // 对《车》有影响的是[ 冲击波 & 光辐射 & 核辐射 & 核电磁脉冲 ] ，取4种损伤最大的
+                    //    var result1 = MyCore.NuclearAlgorithm.Airblast(dis, mock.Yield, mock.Alt, info.shock_wave_01, info.shock_wave_02, info.shock_wave_03);
+                    //    var result2 = MyCore.NuclearAlgorithm.ThermalRadiation(dis, mock.Yield, mock.Alt, info.thermal_radiation_01, info.thermal_radiation_02, info.thermal_radiation_03);
+                    //    var result3 = MyCore.NuclearAlgorithm.NuclearRadiation(dis, mock.Yield, mock.Alt, info.nuclear_radiation_01, info.nuclear_radiation_02, info.nuclear_radiation_03);
+
+                    //    DamageEnumeration result4 = DamageEnumeration.Safe;
+                    //    if (info.nuclear_pulse_01!=0 && info.nuclear_pulse_02!=0 && info.nuclear_pulse_03!=0)
+                    //        result4 = MyCore.NuclearAlgorithm.NuclearPulse(dis, mock.Yield, mock.Alt, info.nuclear_pulse_01, info.nuclear_pulse_02, info.nuclear_pulse_03);
+
+                    //    var result12 = (MyCore.enums.DamageEnumeration)Math.Max(result1.GetHashCode(), result2.GetHashCode());
+                    //    var result34 = (MyCore.enums.DamageEnumeration)Math.Max(result3.GetHashCode(), result4.GetHashCode());
+
+                    //    var result = (MyCore.enums.DamageEnumeration)Math.Max(result12.GetHashCode(), result34.GetHashCode());
+                    //    info.nuclear_warheads.Add(mock.NuclearExplosionID + "," + result);
+                    //}
                 }
             }
             //throw new NotImplementedException();

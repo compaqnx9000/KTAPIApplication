@@ -18,10 +18,8 @@ namespace KTAPIApplication.Services
         List<MockBO> QueryMock(string nuclearExplosionID);
 
         /* info表操作 */
-        List<InfoBO> QueryInfoAll();
         List<InfoBO> QueryInfoByBrigade(string brigade);
         List<TaggroupVO> Taggroup();
-
 
         /* config表操作 */
         Dictionary<string, ConfigBO> QueryConfigAll();
@@ -30,8 +28,6 @@ namespace KTAPIApplication.Services
         bool UpdateConfig(string id,ConfigBO config);
         bool DeleteConfig(string id);
         string AddConfig(ConfigBO config);
-
-        Task<IEnumerable<ConfigBO>> GetConfigsAsync();
 
         /* description表操作 */
         List<DescriptionBO> GetDescriptions();

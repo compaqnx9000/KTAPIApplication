@@ -18,57 +18,66 @@ namespace KTAPIApplication.Controllers
             _mongoService = mongoService ??
                 throw new ArgumentNullException(nameof(mongoService));
         }
-        /// <summary>
-        /// 查询所有。
-        /// </summary>
-        /// <returns></returns>
+ 
         [HttpGet("infos")]
-        public ActionResult GetInfos()
+        public IActionResult GetInfos()
         {
-            var result = _mongoService.GetInfos();
-            return new JsonResult(new
+            var resultFromRepo = _mongoService.GetInfos();
+            if(resultFromRepo ==null || resultFromRepo.Count() <= 0)
+            {
+                return NotFound(new
+                {
+                    return_status = 1,
+                    return_msg = "",
+                    return_data = resultFromRepo
+                });
+            }
+            return Ok(new
             {
                 return_status = 0,
                 return_msg = "",
-                return_data = result
+                return_data = resultFromRepo
             });
         }
-        /// <summary>
-        /// 查询一条记录。
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        [HttpGet("infos/{id}")]
-        public ActionResult GetInfo([FromRoute] string id)
-        {
-            var result = _mongoService.GetInfo(id);
 
-            return new JsonResult(new
+        [HttpGet("infos/{id}",Name = "GetInfo")]
+        public IActionResult GetInfo([FromRoute] string id)
+        {
+            var resultFromRepo = _mongoService.GetInfo(id);
+
+            if (resultFromRepo == null)
+            {
+                return NotFound(new
+                {
+                    return_status = 1,
+                    return_msg = "",
+                    return_data = resultFromRepo
+                });
+            }
+
+            return Ok(new
             {
                 return_status = 0,
                 return_msg = "",
-                return_data = result
+                return_data = resultFromRepo
             });
         }
-        /// <summary>
-        /// 添加一条记录。
-        /// </summary>
-        /// <param name="bo"></param>
-        /// <returns></returns>
+
         [HttpPost("infos")]
-        public ActionResult AddInfo([FromBody] InfoBO bo)
+        public IActionResult CreateInfo([FromBody] InfoBO bo)
         {
             var result = _mongoService.AddInfo(bo);
 
-            return new JsonResult(new
+            return Ok(new
             {
+                id = result,
                 return_status = 0,
                 return_msg = "",
                 return_data = result
             });
         }
         [HttpPut("infos/{id}")]
-        public ActionResult UpdateInfo([FromRoute] string id, [FromBody] InfoBO bo)
+        public IActionResult UpdateInfo([FromRoute] string id, [FromBody] InfoBO bo)
         {
             bool result = _mongoService.UpdateInfo(id, bo);
 
@@ -80,7 +89,7 @@ namespace KTAPIApplication.Controllers
             });
         }
         [HttpDelete("infos/{id}")]
-        public ActionResult DeleteInfo([FromRoute] string id)
+        public IActionResult DeleteInfo([FromRoute] string id)
         {
             bool result = _mongoService.DeleteInfo(id);
 
@@ -95,7 +104,7 @@ namespace KTAPIApplication.Controllers
 
         // add 0715
         [HttpGet("taggroup")]
-        public ActionResult Taggroup()
+        public IActionResult Taggroup()
         {
             return new JsonResult(new
             {
@@ -106,7 +115,7 @@ namespace KTAPIApplication.Controllers
         }
 
         [HttpGet("fields")]
-        public ActionResult Fields()
+        public IActionResult Fields()
         {
             Dictionary<string, string> flds = new Dictionary<string, string>();
 
@@ -142,6 +151,15 @@ namespace KTAPIApplication.Controllers
             //flds.Add("targetBindingTime", "double");
             //flds.Add("defenseBindingTime", "double");
             flds.Add("fireRange", "double");
+            // 2020-10-10
+            flds.Add("useState", "string");
+            flds.Add("structureLength", "double");
+            flds.Add("structureWidth", "double");
+            flds.Add("structureHeight", "double");
+            flds.Add("headCount", "int");
+            flds.Add("bodyCount", "int");
+            flds.Add("platCount", "int");
+            flds.Add("notes", "string");
 
             return new JsonResult(new
             {
@@ -152,7 +170,7 @@ namespace KTAPIApplication.Controllers
         }
 
         [HttpGet("fieldsExclude")]
-        public ActionResult FieldsExclude()
+        public IActionResult FieldsExclude()
         {
             Dictionary<string, string> flds = new Dictionary<string, string>();
 

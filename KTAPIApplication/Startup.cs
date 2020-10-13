@@ -1,6 +1,4 @@
-﻿using DinkToPdf;
-using DinkToPdf.Contracts;
-using KTAPIApplication.Services;
+﻿using KTAPIApplication.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -8,18 +6,17 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
-using SystemAPIApplication;
 
 namespace KTAPIApplication
 {
     public class Startup
     {
+        public IConfiguration Configuration { get; }
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
 
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -28,17 +25,12 @@ namespace KTAPIApplication
                            .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
                            .AddNewtonsoftJson(opt => opt.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore);
 
-            services.Configure<MongoSetting>(Configuration.GetSection("MongoSetting"))
-                .Configure<MongoOtherSetting>(Configuration.GetSection("MongoOtherSetting"))
-                .Configure<ServiceUrls>(Configuration.GetSection("ServiceUrls"))
-                .Configure<ThirdPartyServiceUrls>(Configuration.GetSection("ThirdPartyServiceUrls"))
-                .AddControllers();
+            services.AddControllers();
 
 
-            services.AddSingleton<IMongoService, MongoService>();
+            services.AddTransient<IMongoService, MongoService>();
             services.AddSingleton<IDamageAnalysisService, DamageAnalysisService>();
 
-            services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));//DinkToPdf注入
             services.AddTransient<IPDFService, PDFService>();
 
         }
